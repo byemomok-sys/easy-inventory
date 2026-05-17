@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>똑똑한 냉동고 집사</title>
   <style>
     body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -97,6 +98,7 @@
     
     const greeting = new SpeechSynthesisUtterance("네, 주인님. 무엇을 도와드릴까요?");
     greeting.lang = "ko-KR";
+    greeting.rate = 1.2; // 💡 속도를 1.1 ~ 1.2로 설정하면 딱 듣기 좋은 속도가 됩니다.
 
     // 인사가 끝나면 바로 마이크 시작
     greeting.onend = function() {
@@ -131,21 +133,28 @@
   };
 
   // 실시간 음성 인식 결과 처리 (chatContainer 내부에 말풍선으로 업데이트하도록 개선)
+  // 기존 recognition.onresult 부분을 통째로 지우고 아래 코드로 교체하세요.
   recognition.onresult = function(event) {
     let interimTranscript = "";
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
+    let fullTranscript = "";
+    
+    // 모바일 크롬의 중복 덧붙이기 버그를 막기 위해 인덱스 0부터 전체를 새로 조립합니다.
+    for (let i = 0; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
+        fullTranscript += event.results[i][0].transcript;
       } else {
         interimTranscript += event.results[i][0].transcript;
       }
     }
     
-    // 유저가 말하기 시작하면 대화창에 실시간으로 파란색 말풍선 생성 및 업데이트
+    // 최종 변수 갱신
+    finalTranscript = fullTranscript;
+    
+    // 화면에 실시간 말풍선 업데이트
     if (!currentUserBubble) {
       currentUserBubble = createChatBubble("", 'user');
     }
-    currentUserBubble.innerText = finalTranscript + interimTranscript;
+    currentUserBubble.innerText = fullTranscript + interimTranscript;
   };
 
   /**
@@ -196,6 +205,7 @@
     // 답변 읽어주기
     const reply = new SpeechSynthesisUtterance(response);
     reply.lang = "ko-KR";
+    reply.rate = 1.1; // 💡 집사의 답변 속도도 동일하게 맞춥니다.
     window.speechSynthesis.speak(reply);
   }
 
