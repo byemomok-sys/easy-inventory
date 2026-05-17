@@ -19,9 +19,9 @@
 
     /* 하단 조작 영역 */
     .controls { padding: 30px; background: #1f1f1f; display: flex; flex-direction: column; align-items: center; gap: 20px; border-top: 1px solid #333; }
-    #micBtn { width: 90px; height: 90px; border-radius: 50%; border: none; background: #444; color: white; font-size: 2.5rem; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    #micBtn { width: 90px; height: 90px; border-radius: 50%; border: none; background: #444; color: white; font-size: 2.5rem; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; }
     
-    /* 마이크가 작동 중일 때의 애니메이션 (기존 .active와 통합 및 최적화) */
+    /* 마이크가 작동 중일 때의 애니메이션 */
     #micBtn.listening {
       background: #ff4444;
       transform: scale(1.1);
@@ -65,18 +65,21 @@
 
 <script>
   // 1. 초기 설정 및 변수 선언
+  // 💡 [필수 확인] 아래 큰따옴표 내부에 본인의 구글 Apps Script 웹 앱 URL 주소를 반드시 붙여넣으세요!
+  const GAS_WEB_APP_URL = "여기에_구글_웹앱_배포_URL을_넣으세요"; 
+  
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   let isListening = false;
   let finalTranscript = "";
-  let currentUserBubble = null; // 실시간 자막 표시용 말풍선 변수
+  let currentUserBubble = null; 
 
   // 음성 인식 기본 설정
   recognition.lang = 'ko-KR';
-  recognition.continuous = true;    // 사용자가 멈출 때까지 계속 듣기
-  recognition.interimResults = true; // 중간 인식 결과 보여주기
+  recognition.continuous = true;    
+  recognition.interimResults = true; 
 
   /**
-   * [말풍선 생성 함수] 대화창 유저/집사 UI를 다이내믹하게 생성
+   * [말풍선 생성 함수]
    */
   function createChatBubble(text, sender) {
     const container = document.getElementById('chatContainer');
@@ -84,23 +87,21 @@
     bubble.classList.add('bubble', sender);
     bubble.innerText = text;
     container.appendChild(bubble);
-    container.scrollTop = container.scrollHeight; // 스크롤 하단 고정
+    container.scrollTop = container.scrollHeight; 
     return bubble;
   }
 
   /**
-   * [단계 1] 집사 부르기: 첫 화면 오버레이를 닫고 인사 후 자동으로 마이크 켜기
+   * [단계 1] 집사 부르기: 오타 수정 완료
    */
   function callButler() {
-    // 오버레이 화면 닫기
-    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none'; // 오타 제거 완료
     updateStatus("집사가 응답하는 중...");
     
     const greeting = new SpeechSynthesisUtterance("네, 주인님. 무엇을 도와드릴까요?");
     greeting.lang = "ko-KR";
-    greeting.rate = 1.2; // 💡 속도를 1.1 ~ 1.2로 설정하면 딱 듣기 좋은 속도가 됩니다.
+    greeting.rate = 1.1; // 💡 말소리 속도를 듣기 좋은 1.1배속으로 상향
 
-    // 인사가 끝나면 바로 마이크 시작
     greeting.onend = function() {
       startListening();
     };
@@ -116,7 +117,7 @@
     
     try {
       finalTranscript = ""; 
-      currentUserBubble = null; // 새로운 입력 대기 시 말풍선 초기화
+      currentUserBubble = null; 
       recognition.start();
     } catch (e) {
       console.log("인식 시작 오류:", e);
@@ -125,40 +126,37 @@
     }
   }
 
-  // 마이크가 실제로 켜졌을 때 실행 (id 매칭 완료)
   recognition.onstart = function() {
     isListening = true;
     updateStatus("🎤 듣고 있습니다... 말씀 후 마이크를 눌러주세요.");
-    document.getElementById('micBtn').classList.add('listening'); // 깜빡임 애니메이션 활성화
-  };
-
-  // 실시간 음성 인식 결과 처리 (chatContainer 내부에 말풍선으로 업데이트하도록 개선)
-  // 기존 recognition.onresult 부분을 통째로 지우고 아래 코드로 교체하세요.
-  recognition.onresult = function(event) {
-    let interimTranscript = "";
-    let fullTranscript = "";
-    
-    // 모바일 크롬의 중복 덧붙이기 버그를 막기 위해 인덱스 0부터 전체를 새로 조립합니다.
-    for (let i = 0; i < event.results.length; ++i) {
-      if (event.results[i].isFinal) {
-        fullTranscript += event.results[i][0].transcript;
-      } else {
-        interimTranscript += event.results[i][0].transcript;
-      }
-    }
-    
-    // 최종 변수 갱신
-    finalTranscript = fullTranscript;
-    
-    // 화면에 실시간 말풍선 업데이트
-    if (!currentUserBubble) {
-      currentUserBubble = createChatBubble("", 'user');
-    }
-    currentUserBubble.innerText = fullTranscript + interimTranscript;
+    document.getElementById('micBtn').classList.add('listening'); 
   };
 
   /**
-   * [단계 3] 마이크 버튼 클릭: 말하기 종료 및 AI 전송 (id 및 토글 매칭 완료)
+   * [안드로이드 크롬 전용 중복 방지 로직 적용]
+   */
+  recognition.onresult = function(event) {
+    let interimTranscript = "";
+    
+    // event.resultIndex부터 루프를 돌려 모바일 크롬의 중복 누적 연산 버그를 원천 차단합니다.
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+    
+    if (!currentUserBubble) {
+      currentUserBubble = createChatBubble("", 'user');
+    }
+    // 확정된 누적문장(finalTranscript)과 현재 입력중인 문장(interimTranscript)을 깔끔히 조합합니다.
+    currentUserBubble.innerText = finalTranscript + interimTranscript;
+  };
+
+  /**
+   * [단계 3] 마이크 버튼 클릭: 말하기 종료 및 AI 전송
    */
   function handleMicClick() {
     if (isListening) {
@@ -166,18 +164,19 @@
       isListening = false;
       document.getElementById('micBtn').classList.remove('listening');
       
-      if (finalTranscript.trim() === "") {
+      // 최종 발화 텍스트 추출 검증
+      const totalText = currentUserBubble ? currentUserBubble.innerText : finalTranscript;
+      
+      if (totalText.trim() === "") {
         updateStatus("인식된 내용이 없습니다. 다시 말씀해 주세요.");
-        if(currentUserBubble) currentUserBubble.remove(); // 빈 말풍선 제거
+        if(currentUserBubble) currentUserBubble.remove(); 
         return;
       }
 
-
-      // [수정 후] 외부 구글 서버로 데이터를 쏘는 표준 방식
       updateStatus("⌛ 주인님의 말씀을 생각하는 중...");
       fetch(GAS_WEB_APP_URL, {
         method: "POST",
-        body: JSON.stringify({ text: finalTranscript })
+        body: JSON.stringify({ text: totalText })
       })
       .then(response => response.json())
       .then(data => {
@@ -186,9 +185,8 @@
       .catch(err => {
         console.error("통신 오류:", err);
         updateStatus("통신 오류가 발생했습니다.");
-      });; 
+      });
     } else {
-      // 꺼져있을 때 누르면 다시 듣기 시작
       startListening();
     }
   }
@@ -198,26 +196,21 @@
    */
   function responseFromGemini(response) {
     updateStatus("집사가 답변을 준비했습니다.");
-    
-    // 회색 집사 말풍선 생성 및 답변 출력
     createChatBubble(response, 'butler');
 
-    // 답변 읽어주기
     const reply = new SpeechSynthesisUtterance(response);
     reply.lang = "ko-KR";
-    reply.rate = 1.1; // 💡 집사의 답변 속도도 동일하게 맞춥니다.
+    reply.rate = 1.1; // 💡 답변 속도 조정
     window.speechSynthesis.speak(reply);
   }
 
   /**
-   * [추가 보완] 냉파 제안 버튼 클릭 시 작동할 함수 구현
+   * 냉파 제안 버튼 구현
    */
-
   function requestNaepa() {
     updateStatus("⌛ 냉파 제안을 생각하는 중...");
     createChatBubble("✨ 냉파 제안해줘", 'user');
     
-    // [수정 후]
     fetch(GAS_WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify({ text: "냉파 제안해줘" })
@@ -232,13 +225,11 @@
     });
   }
 
-  // 상태 메시지 업데이트 함수 (id 명칭 statusLabel로 완전 일치화)
   function updateStatus(msg) {
     const statusElement = document.getElementById('statusLabel');
     if(statusElement) statusElement.innerText = msg;
   }
 
-  // 에러 처리
   recognition.onerror = function(event) {
     console.error("인식 에러:", event.error);
     updateStatus("오류 발생: " + event.error);
