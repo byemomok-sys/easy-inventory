@@ -1,113 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>똑똑한 냉동고 집사</title>
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    
+    /* 헤더 영역 */
+    .header { padding: 20px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; }
+    .status { font-size: 0.9rem; color: #ffcc00; margin-top: 5px; font-weight: bold; }
 
+    /* 채팅 창 영역 */
+    #chatContainer { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+    .bubble { max-width: 80%; padding: 12px 16px; border-radius: 20px; font-size: 1rem; line-height: 1.4; word-break: break-word; }
+    .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
+    .butler { align-self: flex-start; background: #333; color: #e0e0e0; border-bottom-left-radius: 2px; }
 
-// 1. 초기 설정 및 변수 선언
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP5lCFozQRiP7LAHwtkeT104NLzUfPSBwN_v1ZEoOc8hQ2W5lVi97FJ9xVEN79WEoY/exec"; 
+    /* 하단 조작 영역 */
+    .controls { padding: 30px; background: #1f1f1f; display: flex; flex-direction: column; align-items: center; gap: 20px; border-top: 1px solid #333; }
+    #micBtn { width: 90px; height: 90px; border-radius: 50%; border: none; background: #444; color: white; font-size: 2.5rem; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    
+    /* 마이크가 작동 중일 때의 애니메이션 (기존 .active와 통합 및 최적화) */
+    #micBtn.listening {
+      background: #ff4444;
+      transform: scale(1.1);
+      box-shadow: 0 0 25px rgba(255, 68, 68, 0.5);
+      filter: drop-shadow(0 0 10px #ff0000);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .naepa-btn { background: #333; border: 1px solid #ffcc00; color: #ffcc00; padding: 10px 25px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    
+    /* 초기 시작 버튼 overlay */
+    #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+    #startBtn { padding: 20px 40px; font-size: 1.2rem; background: #ffcc00; border:none; border-radius: 50px; font-weight:bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <div id="overlay">
+    <button id="startBtn" onclick="callButler()">집사 부르기</button>
+    <p style="color: #888; margin-top: 20px;">터치하면 대화를 시작합니다</p>
+  </div>
+
+  <div class="header">
+    <div style="font-weight: bold; font-size: 1.2rem;">똑똑한 냉동고 집사</div>
+    <div class="status" id="statusLabel">대기 중...</div>
+  </div>
+  
+  <div id="chatContainer"></div>
+  
+  <div class="controls">
+    <button class="naepa-btn" onclick="requestNaepa()">✨ 냉파 제안</button>
+    <button id="micBtn" onclick="handleMicClick()">🎤</button>
+    <div style="font-size: 0.8rem; color: #666;">마이크를 누르고 말씀하세요</div>
+  </div>
+
+<script>
+  // 1. 초기 설정 및 변수 선언
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   let isListening = false;
+  let finalTranscript = "";
+  let currentUserBubble = null; // 실시간 자막 표시용 말풍선 변수
 
-  const GEMINI_API_KEY = "AIzaSyBTzzCkhEeVPQgrqBJVxuHcv-MmII7w3Xw"; // 소장님 키 유지
-  const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+  // 음성 인식 기본 설정
+  recognition.lang = 'ko-KR';
+  recognition.continuous = true;    // 사용자가 멈출 때까지 계속 듣기
+  recognition.interimResults = true; // 중간 인식 결과 보여주기
 
-// 1. 웹앱 접속 시 실행되는 함수
-function doGet() {
-  return HtmlService.createTemplateFromFile('index')
-    .evaluate()
-    .setTitle('똑똑한 냉동고 집사')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-}
+  /**
+   * [말풍선 생성 함수] 대화창 유저/집사 UI를 다이내믹하게 생성
+   */
+  function createChatBubble(text, sender) {
+    const container = document.getElementById('chatContainer');
+    const bubble = document.createElement('div');
+    bubble.classList.add('bubble', sender);
+    bubble.innerText = text;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight; // 스크롤 하단 고정
+    return bubble;
+  }
 
-// 2. 음성 입력을 받아 AI와 대화하고 시트를 업데이트하는 핵심 함수
-function processVoice(userInput, isNaepaRequest = false) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sessionSheet = ss.getSheetByName("대화세션");
-  const invSheet = ss.getSheetByName("재고현황");
-  const logSheet = ss.getSheetByName("입력로그");
-  
-  const lastRow = sessionSheet.getLastRow();
-  const sessionID = sessionSheet.getRange(lastRow, 1).getValue() || 1;
-  const chatHistory = sessionSheet.getRange(lastRow, 5).getValue() || "";
-  
-  // 재고 정보 가져오기
-  const invData = invSheet.getDataRange().getValues().slice(1);
-  const currentInv = invData.map(r => `${r[0]}: ${r[1]}${r[2]}`).join(", ");
-
-  // 냉파 제안용 모드 설정
-  let modeInstruction = isNaepaRequest 
-    ? "지금은 '냉파 제안' 모드야. 현재 재고를 바탕으로 주인님이 맛있게 드실 수 있는 메뉴를 딱 하나만 정중히 추천해드려." 
-    : "현재 재고와 이전 대화를 참고해서 주인님의 요청을 처리해.";
-
-  const prompt = `
-    당신은 충성스러운 '냉동고 집사'입니다. 
-    호칭: 무조건 사용자를 '주인님'이라 부르세요. 
-    말투: 매우 정중하고 유능한 집사의 톤을 유지하세요.
+  /**
+   * [단계 1] 집사 부르기: 첫 화면 오버레이를 닫고 인사 후 자동으로 마이크 켜기
+   */
+  function callButler() {
+    // 오버레이 화면 닫기
+    document.getElementById('overlay').style.display = 'none';
+    updateStatus("집사가 응답하는 중...");
     
-    ${modeInstruction}
-    [현재 재고]: ${currentInv}
-    [이전 대화]: ${chatHistory}
-    [주인님 말씀]: "${userInput}"
+    const greeting = new SpeechSynthesisUtterance("네, 주인님. 무엇을 도와드릴까요?");
+    greeting.lang = "ko-KR";
 
-    응답 형식(JSON):
-    {
-      "status": "ask" 또는 "done",
-      "message": "주인님께 드릴 음성 답변",
-      "data": [ {"item": "품목", "qty": 수량(숫자), "unit": "단위"} ]
+    // 인사가 끝나면 바로 마이크 시작
+    greeting.onend = function() {
+      startListening();
+    };
+
+    window.speechSynthesis.speak(greeting);
+  }
+
+  /**
+   * [단계 2] 마이크 시작 로직
+   */
+  function startListening() {
+    if (isListening) return;
+    
+    try {
+      finalTranscript = ""; 
+      currentUserBubble = null; // 새로운 입력 대기 시 말풍선 초기화
+      recognition.start();
+    } catch (e) {
+      console.log("인식 시작 오류:", e);
+      recognition.stop();
+      setTimeout(() => recognition.start(), 200);
     }
-  `;
+  }
 
-  try {
-    const response = UrlFetchApp.fetch(`${BASE_URL}/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      "method": "post",
-      "contentType": "application/json",
-      "payload": JSON.stringify({ "contents": [{ "parts": [{ "text": prompt }] }] })
+  // 마이크가 실제로 켜졌을 때 실행 (id 매칭 완료)
+  recognition.onstart = function() {
+    isListening = true;
+    updateStatus("🎤 듣고 있습니다... 말씀 후 마이크를 눌러주세요.");
+    document.getElementById('micBtn').classList.add('listening'); // 깜빡임 애니메이션 활성화
+  };
+
+  // 실시간 음성 인식 결과 처리 (chatContainer 내부에 말풍선으로 업데이트하도록 개선)
+  recognition.onresult = function(event) {
+    let interimTranscript = "";
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interimTranscript += event.results[i][0].transcript;
+      }
+    }
+    
+    // 유저가 말하기 시작하면 대화창에 실시간으로 파란색 말풍선 생성 및 업데이트
+    if (!currentUserBubble) {
+      currentUserBubble = createChatBubble("", 'user');
+    }
+    currentUserBubble.innerText = finalTranscript + interimTranscript;
+  };
+
+  /**
+   * [단계 3] 마이크 버튼 클릭: 말하기 종료 및 AI 전송 (id 및 토글 매칭 완료)
+   */
+  function handleMicClick() {
+    if (isListening) {
+      recognition.stop();
+      isListening = false;
+      document.getElementById('micBtn').classList.remove('listening');
+      
+      if (finalTranscript.trim() === "") {
+        updateStatus("인식된 내용이 없습니다. 다시 말씀해 주세요.");
+        if(currentUserBubble) currentUserBubble.remove(); // 빈 말풍선 제거
+        return;
+      }
+
+
+      // [수정 후] 외부 구글 서버로 데이터를 쏘는 표준 방식
+      updateStatus("⌛ 주인님의 말씀을 생각하는 중...");
+      fetch(GAS_WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify({ text: finalTranscript })
+      })
+      .then(response => response.json())
+      .then(data => {
+        responseFromGemini(data.response);
+      })
+      .catch(err => {
+        console.error("통신 오류:", err);
+        updateStatus("통신 오류가 발생했습니다.");
+      });; 
+    } else {
+      // 꺼져있을 때 누르면 다시 듣기 시작
+      startListening();
+    }
+  }
+
+  /**
+   * [단계 4] AI 응답 처리 및 음성 출력
+   */
+  function responseFromGemini(response) {
+    updateStatus("집사가 답변을 준비했습니다.");
+    
+    // 회색 집사 말풍선 생성 및 답변 출력
+    createChatBubble(response, 'butler');
+
+    // 답변 읽어주기
+    const reply = new SpeechSynthesisUtterance(response);
+    reply.lang = "ko-KR";
+    window.speechSynthesis.speak(reply);
+  }
+
+  /**
+   * [추가 보완] 냉파 제안 버튼 클릭 시 작동할 함수 구현
+   */
+
+  function requestNaepa() {
+    updateStatus("⌛ 냉파 제안을 생각하는 중...");
+    createChatBubble("✨ 냉파 제안해줘", 'user');
+    
+    // [수정 후]
+    fetch(GAS_WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify({ text: "냉파 제안해줘" })
+    })
+    .then(response => response.json())
+    .then(data => {
+      responseFromGemini(data.response);
+    })
+    .catch(err => {
+      console.error("통신 오류:", err);
+      updateStatus("통신 오류가 발생했습니다.");
     });
-    
-    const resText = response.getContentText();
-    const aiData = JSON.parse(resText.match(/\{[\s\S]*\}/)[0]);
-    const aiMessage = aiData.message;
-
-    // 시트 업데이트 및 로그 기록
-    sessionSheet.getRange(lastRow, 2).setValue(aiData.status === "done" ? "완료" : "대기");
-    sessionSheet.getRange(lastRow, 3).setValue(aiMessage);
-    sessionSheet.getRange(lastRow, 5).setValue(chatHistory + `\n주인님: ${userInput}\n집사: ${aiMessage}`);
-    logSheet.appendRow([new Date(), sessionID, userInput, aiMessage]);
-
-    // 재고 반영 (done일 때만)
-    if (aiData.status === "done" && aiData.data) {
-      aiData.data.forEach(newItem => {
-        let found = false;
-        for (let i = 0; i < invData.length; i++) {
-          if (invData[i][0] === newItem.item) {
-            const finalQty = (Number(invData[i][1]) || 0) + newItem.qty;
-            invSheet.getRange(i + 2, 2).setValue(finalQty < 0 ? 0 : finalQty);
-            invSheet.getRange(i + 2, 4).setValue(new Date());
-            found = true; break;
-          }
-        }
-        if (!found && newItem.qty > 0) invSheet.appendRow([newItem.item, newItem.qty, newItem.unit, new Date()]);
-      });
-    }
-
-    return { message: aiMessage };
-  } catch (e) {
-    return { message: "주인님, 죄송합니다. 잠시 생각을 정리할 시간이 필요합니다." };
   }
-}
-function doPost(e) {
-  try {
-    // 외부(GitHub)에서 보낸 JSON 데이터를 파싱합니다.
-    var postData = JSON.parse(e.postData.contents);
-    var userText = postData.text;
-    
-    // 기존에 이미 작성해두신 askGemini 함수를 호출하여 AI 답변을 받습니다.
-    var aiResponse = askGemini(userText); 
-    
-    // 결과를 다시 JSON 형태로 포장하여 GitHub로 돌려보냅니다.
-    var result = { response: aiResponse };
-    return ContentService.createTextOutput(JSON.stringify(result))
-                         .setMimeType(ContentService.MimeType.JSON);
-                         
-  } catch(error) {
-    return ContentService.createTextOutput(JSON.stringify({ response: "서버 에러 발생: " + error.toString() }))
-                         .setMimeType(ContentService.MimeType.JSON);
+
+  // 상태 메시지 업데이트 함수 (id 명칭 statusLabel로 완전 일치화)
+  function updateStatus(msg) {
+    const statusElement = document.getElementById('statusLabel');
+    if(statusElement) statusElement.innerText = msg;
   }
-}
+
+  // 에러 처리
+  recognition.onerror = function(event) {
+    console.error("인식 에러:", event.error);
+    updateStatus("오류 발생: " + event.error);
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+  };
+</script>
+</body>
+</html>
