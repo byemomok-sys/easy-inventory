@@ -65,12 +65,13 @@
 
 <script>
   // 1. 초기 설정 및 변수 선언
-  // 💡 [필수!] 아래 큰따옴표 안에 구글 앱스 스크립트(code.gs)에서 새 배포를 통해 얻은 실제 웹 앱 URL 주소를 붙여넣어 주세요.
-  const GAS_WEB_APP_URL = "여기에_실제_구글_웹앱_URL을_넣으세요"; 
+  // 💡 [필수!] 아래 큰따옴표 안에 구글 앱스 스크립트(code.gs) 웹 앱 URL 주소를 꼭 넣어주세요.
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP5lCFozQRiP7LAHwtkeT104NLzUfPSBwN_v1ZEoOc8hQ2W5lVi97FJ9xVEN79WEoY/exec"; 
   
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   let isListening = false;
-  let finalTranscript = "";
+  let finalTranscript = "";      // 현재 마이크 세션의 실시간 확정 텍스트
+  let saveTranscript = "";       // 💡 추가: 안드로이드 '땡' 소리 시 문장들을 누적 보관할 창고
   let currentUserBubble = null; 
 
   // 음성 인식 기본 설정
@@ -117,6 +118,7 @@
     
     try {
       finalTranscript = ""; 
+      saveTranscript = ""; // 💡 마이크를 새로 켤 때 전체 누적 창고 완전히 비우기
       currentUserBubble = null; 
       recognition.start();
     } catch (e) {
@@ -133,39 +135,67 @@
   };
 
   /**
-   * [음성 중복 차단 핵심 엔진] 기기별 맞춤형 렌더링 방식 적용
+   * [음성 자막 렌더링 엔진] 창고에 저장된 데이터와 현재 목소리를 조합
    */
   recognition.onresult = function(event) {
     const isAndroid = /Android/i.test(navigator.userAgent);
+    let currentResult = "";
     
     if (isAndroid) {
-      // 안드로이드 크롬 전용: 누적 버그를 역이용하여 가장 최신 배열 아이템에서 전체 문장을 통째로 추출합니다.
-      finalTranscript = event.results[event.results.length - 1][0].transcript;
+      currentResult = event.results[event.results.length - 1][0].transcript;
     } else {
-      // PC 및 iOS 전용: 일반적인 청크 결합 연산을 수행합니다.
       let speechToText = "";
       for (let i = 0; i < event.results.length; i++) {
         speechToText += event.results[i][0].transcript;
       }
-      finalTranscript = speechToText;
+      currentResult = speechToText;
     }
+    
+    finalTranscript = currentResult; // 현재 세션의 텍스트 상시 갱신
     
     if (!currentUserBubble) {
       currentUserBubble = createChatBubble("", 'user');
     }
-    currentUserBubble.innerText = finalTranscript;
+    // 💡 핵심: 기존에 보관함에 킵해둔 문장들(saveTranscript) 뒤에 현재 입력 중인 문장을 붙여서 실시간 노출
+    currentUserBubble.innerText = saveTranscript + currentResult;
   };
 
   /**
-   * [단계 3] 마이크 버튼 클릭: 말하기 종료 및 AI 전송
+   * 💡 [핵심 추가] 안드로이드가 '땡' 소리 내며 강제로 마이크 끊었을 때 대응하는 생명주기 함수
+   */
+  recognition.onend = function() {
+    // 사용자가 종료 버튼을 누른 게 아닌데도 마이크가 꺼졌다면 ➔ 안드로이드가 숨고르기로 끊어버린 상황!
+    if (isListening) {
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        // 1. 지금까지 입력받아 확정된 문장을 누적 창고에 이어 붙입니다.
+        if (finalTranscript.trim() !== "") {
+          saveTranscript += finalTranscript + " ";
+          finalTranscript = ""; // 세션 텍스트 초기화
+        }
+        // 2. 주인님 모르게 마이크를 백그라운드에서 즉시 재가동시킵니다.
+        try {
+          recognition.start();
+        } catch (e) {
+          console.log("마이크 시스템 재가동 시도 중...", e);
+          setTimeout(() => { if (isListening) recognition.start(); }, 200);
+        }
+      }
+    }
+  };
+
+  /**
+   * [단계 3] 마이크 버튼 클릭: 말하기 수동 종료 및 AI 최종 전송
    */
   function handleMicClick() {
     if (isListening) {
+      // 사용자가 수동으로 마이크를 완전히 종료함
+      isListening = false; 
       recognition.stop();
-      isListening = false;
       document.getElementById('micBtn').classList.remove('listening');
       
-      const totalText = currentUserBubble ? currentUserBubble.innerText : finalTranscript;
+      // 말풍선에 찍혀있는 최종 전체 조립 문장을 타겟으로 설정합니다.
+      const totalText = currentUserBubble ? currentUserBubble.innerText : (saveTranscript + finalTranscript);
       
       if (totalText.trim() === "") {
         updateStatus("인식된 내용이 없습니다. 다시 말씀해 주세요.");
@@ -173,7 +203,6 @@
         return;
       }
 
-      // 주소 검증 스크립트
       if (GAS_WEB_APP_URL.includes("여기에_")) {
         updateStatus("❌ 오류: 코드 상단의 GAS_WEB_APP_URL 주소를 실제 주소로 변경해 주세요!");
         return;
