@@ -65,19 +65,18 @@
 
 <script>
   // 1. 초기 설정 및 변수 선언
-  // 💡 [필수!] 아래 큰따옴표 안에 구글 앱스 스크립트(code.gs) 웹 앱 URL 주소를 꼭 넣어주세요.
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP5lCFozQRiP7LAHwtkeT104NLzUfPSBwN_v1ZEoOc8hQ2W5lVi97FJ9xVEN79WEoY/exec"; 
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP5lCFozQRiP7LAHwtkeT104NLzUfPSBwN_v1ZEoOc8hQ2W5lVi97FJ9xVEN79WEoY/exec";
   
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   let isListening = false;
   let finalTranscript = "";      // 현재 마이크 세션의 실시간 확정 텍스트
-  let saveTranscript = "";       // 💡 추가: 안드로이드 '땡' 소리 시 문장들을 누적 보관할 창고
-  let currentUserBubble = null; 
+  let saveTranscript = "";       // 안드로이드 '땡' 소리 시 문장들을 누적 보관할 창고
+  let currentUserBubble = null;
 
   // 음성 인식 기본 설정
   recognition.lang = 'ko-KR';
   recognition.continuous = true;    
-  recognition.interimResults = true; 
+  recognition.interimResults = true;
 
   /**
    * [말풍선 생성 함수]
@@ -88,26 +87,24 @@
     bubble.classList.add('bubble', sender);
     bubble.innerText = text;
     container.appendChild(bubble);
-    container.scrollTop = container.scrollHeight; 
+    container.scrollTop = container.scrollHeight;
     return bubble;
   }
 
   /**
-   * [단계 1] 집사 부르기
+   * [단계 1] 집사 부르기 (병렬화 구조 최적화)
    */
   function callButler() {
-    document.getElementById('overlay').style.display = 'none'; 
+    document.getElementById('overlay').style.display = 'none';
     updateStatus("집사가 응답하는 중...");
     
     const greeting = new SpeechSynthesisUtterance("네, 주인님. 무엇을 도와드릴까요?");
     greeting.lang = "ko-KR";
-    greeting.rate = 1.1; 
+    greeting.rate = 1.1;
 
-    greeting.onend = function() {
-      startListening();
-    };
-
+    // 💡 교정 완료: 말 끝날 때까지 기다리는 이벤트 리스너를 완전히 삭제하고 병렬 처리합니다.
     window.speechSynthesis.speak(greeting);
+    startListening(); 
   }
 
   /**
@@ -117,9 +114,9 @@
     if (isListening) return;
     
     try {
-      finalTranscript = ""; 
-      saveTranscript = ""; // 💡 마이크를 새로 켤 때 전체 누적 창고 완전히 비우기
-      currentUserBubble = null; 
+      finalTranscript = "";
+      saveTranscript = "";
+      currentUserBubble = null;
       recognition.start();
     } catch (e) {
       console.log("인식 시작 오류:", e);
@@ -131,11 +128,11 @@
   recognition.onstart = function() {
     isListening = true;
     updateStatus("🎤 듣고 있습니다... 말씀 후 마이크를 눌러주세요.");
-    document.getElementById('micBtn').classList.add('listening'); 
+    document.getElementById('micBtn').classList.add('listening');
   };
 
   /**
-   * [음성 자막 렌더링 엔진] 창고에 저장된 데이터와 현재 목소리를 조합
+   * [음성 자막 렌더링 엔진]
    */
   recognition.onresult = function(event) {
     const isAndroid = /Android/i.test(navigator.userAgent);
@@ -151,29 +148,25 @@
       currentResult = speechToText;
     }
     
-    finalTranscript = currentResult; // 현재 세션의 텍스트 상시 갱신
+    finalTranscript = currentResult;
     
     if (!currentUserBubble) {
       currentUserBubble = createChatBubble("", 'user');
     }
-    // 💡 핵심: 기존에 보관함에 킵해둔 문장들(saveTranscript) 뒤에 현재 입력 중인 문장을 붙여서 실시간 노출
     currentUserBubble.innerText = saveTranscript + currentResult;
   };
 
   /**
-   * 💡 [핵심 추가] 안드로이드가 '땡' 소리 내며 강제로 마이크 끊었을 때 대응하는 생명주기 함수
+   * 안드로이드 강제 마이크 끊김 방지 리스너
    */
   recognition.onend = function() {
-    // 사용자가 종료 버튼을 누른 게 아닌데도 마이크가 꺼졌다면 ➔ 안드로이드가 숨고르기로 끊어버린 상황!
     if (isListening) {
       const isAndroid = /Android/i.test(navigator.userAgent);
       if (isAndroid) {
-        // 1. 지금까지 입력받아 확정된 문장을 누적 창고에 이어 붙입니다.
         if (finalTranscript.trim() !== "") {
           saveTranscript += finalTranscript + " ";
-          finalTranscript = ""; // 세션 텍스트 초기화
+          finalTranscript = "";
         }
-        // 2. 주인님 모르게 마이크를 백그라운드에서 즉시 재가동시킵니다.
         try {
           recognition.start();
         } catch (e) {
@@ -189,17 +182,15 @@
    */
   function handleMicClick() {
     if (isListening) {
-      // 사용자가 수동으로 마이크를 완전히 종료함
-      isListening = false; 
+      isListening = false;
       recognition.stop();
       document.getElementById('micBtn').classList.remove('listening');
       
-      // 말풍선에 찍혀있는 최종 전체 조립 문장을 타겟으로 설정합니다.
       const totalText = currentUserBubble ? currentUserBubble.innerText : (saveTranscript + finalTranscript);
       
       if (totalText.trim() === "") {
         updateStatus("인식된 내용이 없습니다. 다시 말씀해 주세요.");
-        if(currentUserBubble) currentUserBubble.remove(); 
+        if(currentUserBubble) currentUserBubble.remove();
         return;
       }
 
@@ -235,7 +226,7 @@
 
     const reply = new SpeechSynthesisUtterance(response);
     reply.lang = "ko-KR";
-    reply.rate = 1.1; 
+    reply.rate = 1.1;
     window.speechSynthesis.speak(reply);
   }
 
@@ -254,7 +245,7 @@
     fetch(GAS_WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify({ text: "냉파 제안해줘" })
-    })
+      })
     .then(response => response.json())
     .then(data => {
       responseFromGemini(data.response);
