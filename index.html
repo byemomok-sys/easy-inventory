@@ -148,7 +148,10 @@
       fetch(GAS_WEB_APP_URL, {
         method: "POST",
         redirect: "follow", 
-        body: JSON.stringify({ text: totalText })
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+       body: JSON.stringify({ text: totalText })
       })
       .then(response => response.json())
       .then(data => {
@@ -170,6 +173,9 @@
     fetch(GAS_WEB_APP_URL, {
       method: "POST",
       redirect: "follow",
+      headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
       body: JSON.stringify({ text: "냉파 제안해줘" })
       })
     .then(response => response.json())
