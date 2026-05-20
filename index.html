@@ -42,6 +42,8 @@
     #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
     #startBtn { padding: 20px 40px; font-size: 1.2rem; background: #ffcc00; border:none; border-radius: 50px; font-weight:bold; cursor: pointer; }
   </style>
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com">
 </head>
 <body>
 
@@ -64,23 +66,21 @@
   </div>
 
 <script>
-  // 1. 초기 설정 및 변수 선언
+  // ==========================================
+  // [설정] 본인의 웹앱 주소 기입
+  // ==========================================
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP5lCFozQRiP7LAHwtkeT104NLzUfPSBwN_v1ZEoOc8hQ2W5lVi97FJ9xVEN79WEoY/exec";
   
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   let isListening = false;
-  let finalTranscript = "";      // 현재 마이크 세션의 실시간 확정 텍스트
-  let saveTranscript = "";       // 안드로이드 '땡' 소리 시 문장들을 누적 보관할 창고
+  let finalTranscript = "";      
+  let saveTranscript = "";       
   let currentUserBubble = null;
 
-  // 음성 인식 기본 설정
   recognition.lang = 'ko-KR';
   recognition.continuous = true;    
   recognition.interimResults = true;
 
-  /**
-   * [말풍선 생성 함수]
-   */
   function createChatBubble(text, sender) {
     const container = document.getElementById('chatContainer');
     const bubble = document.createElement('div');
@@ -91,28 +91,23 @@
     return bubble;
   }
 
-  /**
-   * [단계 1] 집사 부르기 (병렬화 구조 최적화)
-   */
   function callButler() {
     document.getElementById('overlay').style.display = 'none';
     updateStatus("집사가 응답하는 중...");
     
-    const greeting = new SpeechSynthesisUtterance("네, 주인님. 무엇을 도와드릴까요?");
-    greeting.lang = "ko-KR";
-    greeting.rate = 1.1;
-
-    // 💡 교정 완료: 말 끝날 때까지 기다리는 이벤트 리스너를 완전히 삭제하고 병렬 처리합니다.
-    window.speechSynthesis.speak(greeting);
+    // 💡 TTS(음성 출력)를 비동기로 던져두어 화면 그리기(Main Thread) 랙 방지
+    setTimeout(() => {
+      const greeting = new SpeechSynthesisUtterance("네, 주인님. 무엇을 도와드릴까요?");
+      greeting.lang = "ko-KR";
+      greeting.rate = 1.1;
+      window.speechSynthesis.speak(greeting);
+    }, 0);
+    
     startListening(); 
   }
 
-  /**
-   * [단계 2] 마이크 시작 로직
-   */
   function startListening() {
     if (isListening) return;
-    
     try {
       finalTranscript = "";
       saveTranscript = "";
@@ -127,13 +122,10 @@
 
   recognition.onstart = function() {
     isListening = true;
-    updateStatus("🎤 듣고 있습니다... 말씀 후 마이크를 눌러주세요.");
+    updateStatus("🎤 듣고 있습니다...");
     document.getElementById('micBtn').classList.add('listening');
   };
 
-  /**
-   * [음성 자막 렌더링 엔진]
-   */
   recognition.onresult = function(event) {
     const isAndroid = /Android/i.test(navigator.userAgent);
     let currentResult = "";
@@ -156,9 +148,6 @@
     currentUserBubble.innerText = saveTranscript + currentResult;
   };
 
-  /**
-   * 안드로이드 강제 마이크 끊김 방지 리스너
-   */
   recognition.onend = function() {
     if (isListening) {
       const isAndroid = /Android/i.test(navigator.userAgent);
@@ -170,16 +159,12 @@
         try {
           recognition.start();
         } catch (e) {
-          console.log("마이크 시스템 재가동 시도 중...", e);
           setTimeout(() => { if (isListening) recognition.start(); }, 200);
         }
       }
     }
   };
 
-  /**
-   * [단계 3] 마이크 버튼 클릭: 말하기 수동 종료 및 AI 최종 전송
-   */
   function handleMicClick() {
     if (isListening) {
       isListening = false;
@@ -189,23 +174,22 @@
       const totalText = currentUserBubble ? currentUserBubble.innerText : (saveTranscript + finalTranscript);
       
       if (totalText.trim() === "") {
-        updateStatus("인식된 내용이 없습니다. 다시 말씀해 주세요.");
+        updateStatus("인식된 내용이 없습니다.");
         if(currentUserBubble) currentUserBubble.remove();
         return;
       }
 
-      if (GAS_WEB_APP_URL.includes("여기에_")) {
-        updateStatus("❌ 오류: 코드 상단의 GAS_WEB_APP_URL 주소를 실제 주소로 변경해 주세요!");
-        return;
-      }
-
       updateStatus("⌛ 주인님의 말씀을 생각하는 중...");
+      
+      // 💡 [v2.5 핵심 가속]: fetch 통신에 redirect="follow" 옵션을 명시하고 렌더링 작업을 병렬 분리
       fetch(GAS_WEB_APP_URL, {
         method: "POST",
+        redirect: "follow", 
         body: JSON.stringify({ text: totalText })
       })
       .then(response => response.json())
       .then(data => {
+        // 백엔드 답변이 오자마자 즉시 화면을 먼저 그리고, TTS 엔진은 뒤에서 비동기로 띄움 (체감속도 상승)
         responseFromGemini(data.response);
       })
       .catch(err => {
@@ -217,33 +201,13 @@
     }
   }
 
-  /**
-   * [단계 4] AI 응답 처리 및 음성 출력
-   */
-  function responseFromGemini(response) {
-    updateStatus("집사가 답변을 준비했습니다.");
-    createChatBubble(response, 'butler');
-
-    const reply = new SpeechSynthesisUtterance(response);
-    reply.lang = "ko-KR";
-    reply.rate = 1.1;
-    window.speechSynthesis.speak(reply);
-  }
-
-  /**
-   * 냉파 제안 버튼 구현
-   */
   function requestNaepa() {
-    if (GAS_WEB_APP_URL.includes("여기에_")) {
-      updateStatus("❌ 오류: 코드 상단의 GAS_WEB_APP_URL 주소를 실제 주소로 변경해 주세요!");
-      return;
-    }
-
     updateStatus("⌛ 냉파 제안을 생각하는 중...");
     createChatBubble("✨ 냉파 제안해줘", 'user');
     
     fetch(GAS_WEB_APP_URL, {
       method: "POST",
+      redirect: "follow",
       body: JSON.stringify({ text: "냉파 제안해줘" })
       })
     .then(response => response.json())
@@ -254,6 +218,19 @@
       console.error("통신 오류:", err);
       updateStatus("통신 오류가 발생했습니다.");
     });
+  }
+
+  function responseFromGemini(response) {
+    updateStatus("집사가 답변을 준비했습니다.");
+    createChatBubble(response, 'butler');
+
+    // 음성 출력을 메인 스레드 렌더링(UI)과 분리하여 화면 끊김 방지
+    setTimeout(() => {
+      const reply = new SpeechSynthesisUtterance(response);
+      reply.lang = "ko-KR";
+      reply.rate = 1.1;
+      window.speechSynthesis.speak(reply);
+    }, 10);
   }
 
   function updateStatus(msg) {
