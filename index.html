@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
   <title>똑똑한 냉동고 집사</title>
   
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -11,19 +16,7 @@
     * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
     input[type="text"] { -webkit-user-select: auto; user-select: auto; }
 
-    /* 💡 [v3.3 핵심 수술] height: 100vh를 100dvh로 교체하여 하단 짤림 완벽 방어 */
-    body { 
-      font-family: 'Noto Sans KR', sans-serif; 
-      background: #121212; 
-      color: #e0e0e0; 
-      margin: 0; 
-      display: flex; 
-      flex-direction: column; 
-      height: 100vh; /* 구형 기기용 예비 */
-      height: 100dvh; /* 최신 기기용 동적 높이 계산 (실제 보이는 영역만 100%) */
-      overflow: hidden; 
-    }
-    
+    body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
     .header { padding: 20px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;}
     .status { font-size: 0.8rem; color: #ffcc00; margin-top: 5px; font-weight: bold; text-align: center;}
     
@@ -32,31 +25,24 @@
     .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
     .butler { align-self: flex-start; background: #333; color: #e0e0e0; border-bottom-left-radius: 2px; }
     
-    /* 💡 [v3.3 보완] safe-area-inset-bottom을 패딩에 추가하여 안드로이드 시스템바와의 미세한 간섭까지 물리적으로 띄워줌 */
-    .controls { 
-      padding: 15px 20px calc(15px + env(safe-area-inset-bottom)); 
-      background: #1f1f1f; 
-      display: flex; 
-      flex-direction: column; 
-      gap: 12px; 
-      border-top: 1px solid #333; 
-    }
-    
+    .controls { padding: 15px 15px calc(15px + env(safe-area-inset-bottom)); background: #1f1f1f; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #333; width: 100%; }
     .btn-row { display: flex; gap: 10px; width: 100%; justify-content: center;}
     .naepa-btn, .inv-btn { background: #333; border: 1px solid #ffcc00; color: #ffcc00; padding: 10px 15px; border-radius: 15px; font-weight: bold; cursor: pointer; flex: 1; font-size: 0.95rem;}
     .inv-btn { border-color: #00e676; color: #00e676; }
     
-    .input-row { display: flex; gap: 10px; width: 100%; align-items: center; }
+    /* 💡 [v3.4 수정] 입력창 밀림(오버플로우) 방지 CSS 전면 교정 */
+    .input-row { display: flex; gap: 8px; width: 100%; align-items: center; justify-content: space-between; }
     #micBtn { width: 50px; height: 50px; border-radius: 50%; border: none; background: #444; color: white; font-size: 1.5rem; cursor: pointer; transition: 0.3s; flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center;}
     #micBtn.listening { background: #ff4444; transform: scale(1.1); box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
     
-    #textInput { flex: 1; padding: 14px 15px; border-radius: 25px; border: none; background: #333; color: white; font-size: 1rem; outline: none; }
-    #sendBtn { padding: 14px 20px; border-radius: 25px; border: none; background: #007bff; color: white; font-size: 1rem; font-weight: bold; cursor: pointer; flex-shrink: 0; }
+    #textInput { flex: 1; min-width: 0; padding: 14px 15px; border-radius: 25px; border: none; background: #333; color: white; font-size: 1rem; outline: none; }
+    #sendBtn { width: 65px; padding: 14px 0; border-radius: 25px; border: none; background: #007bff; color: white; font-size: 1rem; font-weight: bold; cursor: pointer; flex-shrink: 0; text-align: center; }
 
     #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
     #startBtn { padding: 20px 40px; font-size: 1.2rem; background: #ffcc00; border:none; border-radius: 50px; font-weight:bold; cursor: pointer; }
 
+    /* 모달 CSS 유지 */
     #mismatchModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; }
     .mismatch-box { background: #1f1f1f; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .mismatch-title { font-size: 1.2rem; color: #ffcc00; margin-bottom: 15px; font-weight: bold; }
@@ -143,38 +129,62 @@
   let requestStartTime = 0; 
   let currentInventoryData = []; 
   let sortableInstance = null; 
+  
+  // 💡 [v3.4 신규] 가비지 컬렉션(GC) 방지용 전역 변수
+  let globalUtterance = null; 
 
   recognition.lang = 'ko-KR';
   recognition.continuous = true;    
   recognition.interimResults = true;
 
-  // 💡 [v3.2 핵심] 터치 순간 무음 오디오를 재생하여 브라우저의 오디오 잠금을 강제 해제
   function unlockAudio() {
     const ghost = new SpeechSynthesisUtterance(" ");
     ghost.volume = 0;
     window.speechSynthesis.speak(ghost);
   }
 
+  // 💡 [v3.4 신규] 안전한 TTS 재생 전용 함수
+  function playTTS(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // 큐에 꼬인 이전 음성 초기화
+      globalUtterance = new SpeechSynthesisUtterance(text);
+      globalUtterance.lang = "ko-KR";
+      globalUtterance.rate = 1.1;
+      window.speechSynthesis.speak(globalUtterance);
+    }
+  }
+
   function createChatBubble(text, sender) {
     const container = document.getElementById('chatContainer');
     const bubble = document.createElement('div');
     bubble.classList.add('bubble', sender);
-    bubble.innerText = text;
+
+    // 💡 [v3.4 신규] 집사 답변 옆에 수동 스피커 버튼(🔊) 추가
+    if (sender === 'butler') {
+      const textSpan = document.createElement('span');
+      textSpan.innerText = text;
+      const speakerBtn = document.createElement('span');
+      speakerBtn.innerText = " 🔊";
+      speakerBtn.style.cursor = "pointer";
+      speakerBtn.onclick = () => playTTS(text); // 누르면 다시 읽어줌
+      bubble.appendChild(textSpan);
+      bubble.appendChild(speakerBtn);
+    } else {
+      bubble.innerText = text;
+    }
+
     container.appendChild(bubble);
     container.scrollTop = container.scrollHeight;
     return bubble;
   }
 
+  // 💡 [v3.4 수정] 마이크 자동 시작 제거 (수동화)
   function callButler() {
     document.getElementById('overlay').style.display = 'none';
-    unlockAudio(); // 권한 획득
-    updateStatus("집사가 응답하는 중...");
-    setTimeout(() => {
-      const greeting = new SpeechSynthesisUtterance("네, 주인님.");
-      greeting.lang = "ko-KR";
-      window.speechSynthesis.speak(greeting);
-    }, 0);
-    startListening(); 
+    unlockAudio(); 
+    updateStatus("집사를 호출했습니다. 명령을 내려주세요.");
+    setTimeout(() => { playTTS("네, 주인님. 준비되었습니다."); }, 0);
+    // startListening(); // 강제 시작 제거됨
   }
 
   function startListening() {
@@ -199,7 +209,7 @@
     }
     finalTranscript = currentResult;
     if (!currentUserBubble) currentUserBubble = createChatBubble("", 'user');
-    currentUserBubble.innerText = saveTranscript + currentResult;
+    currentUserBubble.childNodes[0].nodeValue = saveTranscript + currentResult; 
   };
 
   recognition.onend = function() {
@@ -209,9 +219,8 @@
     }
   };
 
-  // 마이크 전송
   function handleMicClick() {
-    unlockAudio(); // 권한 획득
+    unlockAudio(); 
     if (isListening) {
       isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening');
       const totalText = currentUserBubble ? currentUserBubble.innerText : (saveTranscript + finalTranscript);
@@ -222,10 +231,9 @@
     }
   }
 
-  // 💡 [신규] 텍스트 자판 전송
   function handleEnter(e) { if(e.key === 'Enter') handleTextSubmit(); }
   function handleTextSubmit() {
-    unlockAudio(); // 권한 획득
+    unlockAudio(); 
     const text = document.getElementById('textInput').value;
     if(!text.trim()) return;
     document.getElementById('textInput').value = ""; 
@@ -234,12 +242,11 @@
   }
 
   function requestNaepa() {
-    unlockAudio(); // 권한 획득
+    unlockAudio(); 
     createChatBubble("✨ 냉파 제안해줘", 'user');
     sendToBackend("냉파 제안해줘");
   }
 
-  // 통신 공통 함수
   function sendToBackend(text) {
     requestStartTime = performance.now();
     updateStatus("⌛ 구글 서버와 통신 중...");
@@ -251,7 +258,6 @@
     })
     .then(response => response.json())
     .then(data => {
-      // 💡 [신규] 단위 충돌 감지 시 팝업 띄우기
       if(data.status === "mismatch") {
         showMismatchModal(data.mismatch, data.parsedData, data.response);
       } else {
@@ -266,11 +272,7 @@
     updateStatus(`✅ 처리 완료: ${duration}초`);
     
     createChatBubble(response, 'butler');
-    setTimeout(() => {
-      const reply = new SpeechSynthesisUtterance(response);
-      reply.lang = "ko-KR"; reply.rate = 1.1;
-      window.speechSynthesis.speak(reply);
-    }, 10);
+    setTimeout(() => { playTTS(response); }, 10);
   }
 
   function updateStatus(msg) {
@@ -279,7 +281,7 @@
   }
 
   // ==================================================
-  // 💡 [v3.2 신규] 단위 충돌 팝업 로직
+  // 단위 충돌 팝업 로직
   // ==================================================
   let pendingData = [];
   let pendingAiMessage = "";
@@ -301,11 +303,7 @@
     btnNew.onclick = () => resolveMismatch(mismatch.newUnit);
 
     document.getElementById('mismatchModal').style.display = 'flex';
-
-    // 팝업 뜰 때 안내 음성 추가
-    const alertSpeech = new SpeechSynthesisUtterance(`${mismatch.item} 단위가 다릅니다. 화면에서 선택해주세요.`);
-    alertSpeech.lang = 'ko-KR'; alertSpeech.rate = 1.1;
-    window.speechSynthesis.speak(alertSpeech);
+    playTTS(`${mismatch.item} 단위가 다릅니다. 화면에서 선택해주세요.`);
   }
 
   function resolveMismatch(chosenUnit) {
@@ -327,7 +325,7 @@
   }
 
   // ==================================================
-  // 재고관리 모달 로직 (기존과 동일)
+  // 재고관리 모달 로직
   // ==================================================
   function openInventory() {
     document.getElementById('invModal').style.display = 'flex';
