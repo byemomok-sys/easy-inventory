@@ -13,8 +13,11 @@
   <style>
     * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
     input[type="text"] { -webkit-user-select: auto; user-select: auto; }
-    body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
-    .header { padding: 20px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;}
+    body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; position: relative; }
+    
+    .version-tag { position: absolute; top: 10px; right: 15px; font-size: 0.75rem; color: #666; font-weight: bold; }
+    
+    .header { padding: 20px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; display: flex; justify-content: center; align-items: center; position: relative; }
     .status { font-size: 0.8rem; color: #ffcc00; margin-top: 5px; font-weight: bold; text-align: center;}
     
     #chatContainer { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
@@ -75,6 +78,7 @@
 
   <div class="header">
     <div style="font-weight: bold; font-size: 1.2rem;">똑똑한 냉동고 집사</div>
+    <div class="version-tag">v3.7</div>
   </div>
   <div class="status" id="statusLabel">대기 중...</div>
   
@@ -128,7 +132,6 @@
   recognition.continuous = true;    
   recognition.interimResults = true;
 
-  // 💡 [v3.5 핵심 픽스] 마비된 큐를 확실히 비우고(cancel) 0.05초 뒤에 재생하여 버그 방어
   function playTTS(text) {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel(); 
@@ -152,7 +155,7 @@
       const speakerBtn = document.createElement('span');
       speakerBtn.innerText = " 🔊";
       speakerBtn.style.cursor = "pointer";
-      speakerBtn.onclick = () => playTTS(text); // 수동 재생
+      speakerBtn.onclick = () => playTTS(text);
       bubble.appendChild(textSpan);
       bubble.appendChild(speakerBtn);
     } else {
@@ -192,7 +195,9 @@
     }
     finalTranscript = currentResult;
     if (!currentUserBubble) currentUserBubble = createChatBubble("", 'user');
-    currentUserBubble.childNodes[0].nodeValue = saveTranscript + currentResult; 
+    
+    // 💡 [v3.7 핵심 버그 수정] 에러를 일으키던 childNodes 방식을 폐기하고, 사용자의 말풍선은 안전한 innerText로 롤백
+    currentUserBubble.innerText = saveTranscript + currentResult; 
   };
 
   recognition.onend = function() {
@@ -202,7 +207,6 @@
     }
   };
 
-  // 💡 [v3.5] 마이크와 TTS 충돌 방지를 위해 unlockAudio() 제거
   function handleMicClick() {
     if (isListening) {
       isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening');
