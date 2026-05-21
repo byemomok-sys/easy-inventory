@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  
   <title>똑똑한 냉동고 집사</title>
   
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -15,7 +13,6 @@
   <style>
     * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
     input[type="text"] { -webkit-user-select: auto; user-select: auto; }
-
     body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
     .header { padding: 20px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;}
     .status { font-size: 0.8rem; color: #ffcc00; margin-top: 5px; font-weight: bold; text-align: center;}
@@ -30,7 +27,6 @@
     .naepa-btn, .inv-btn { background: #333; border: 1px solid #ffcc00; color: #ffcc00; padding: 10px 15px; border-radius: 15px; font-weight: bold; cursor: pointer; flex: 1; font-size: 0.95rem;}
     .inv-btn { border-color: #00e676; color: #00e676; }
     
-    /* 💡 [v3.4 수정] 입력창 밀림(오버플로우) 방지 CSS 전면 교정 */
     .input-row { display: flex; gap: 8px; width: 100%; align-items: center; justify-content: space-between; }
     #micBtn { width: 50px; height: 50px; border-radius: 50%; border: none; background: #444; color: white; font-size: 1.5rem; cursor: pointer; transition: 0.3s; flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center;}
     #micBtn.listening { background: #ff4444; transform: scale(1.1); box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); animation: pulse 1.5s infinite; }
@@ -42,7 +38,6 @@
     #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
     #startBtn { padding: 20px 40px; font-size: 1.2rem; background: #ffcc00; border:none; border-radius: 50px; font-weight:bold; cursor: pointer; }
 
-    /* 모달 CSS 유지 */
     #mismatchModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; }
     .mismatch-box { background: #1f1f1f; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .mismatch-title { font-size: 1.2rem; color: #ffcc00; margin-bottom: 15px; font-weight: bold; }
@@ -71,8 +66,6 @@
     .unit-text { font-size: 0.8rem; color: #aaa; margin-left: 2px; font-weight: normal; }
     .del-btn { background: none; border: none; color: #ff4444; font-size: 1.3rem; padding-left: 5px; }
   </style>
-  <link rel="preconnect" href="https://script.google.com">
-  <link rel="preconnect" href="https://script.googleusercontent.com">
 </head>
 <body>
 
@@ -129,28 +122,22 @@
   let requestStartTime = 0; 
   let currentInventoryData = []; 
   let sortableInstance = null; 
-  
-  // 💡 [v3.4 신규] 가비지 컬렉션(GC) 방지용 전역 변수
   let globalUtterance = null; 
 
   recognition.lang = 'ko-KR';
   recognition.continuous = true;    
   recognition.interimResults = true;
 
-  function unlockAudio() {
-    const ghost = new SpeechSynthesisUtterance(" ");
-    ghost.volume = 0;
-    window.speechSynthesis.speak(ghost);
-  }
-
-  // 💡 [v3.4 신규] 안전한 TTS 재생 전용 함수
+  // 💡 [v3.5 핵심 픽스] 마비된 큐를 확실히 비우고(cancel) 0.05초 뒤에 재생하여 버그 방어
   function playTTS(text) {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // 큐에 꼬인 이전 음성 초기화
-      globalUtterance = new SpeechSynthesisUtterance(text);
-      globalUtterance.lang = "ko-KR";
-      globalUtterance.rate = 1.1;
-      window.speechSynthesis.speak(globalUtterance);
+      window.speechSynthesis.cancel(); 
+      setTimeout(() => {
+        globalUtterance = new SpeechSynthesisUtterance(text);
+        globalUtterance.lang = "ko-KR";
+        globalUtterance.rate = 1.1;
+        window.speechSynthesis.speak(globalUtterance);
+      }, 50);
     }
   }
 
@@ -159,14 +146,13 @@
     const bubble = document.createElement('div');
     bubble.classList.add('bubble', sender);
 
-    // 💡 [v3.4 신규] 집사 답변 옆에 수동 스피커 버튼(🔊) 추가
     if (sender === 'butler') {
       const textSpan = document.createElement('span');
       textSpan.innerText = text;
       const speakerBtn = document.createElement('span');
       speakerBtn.innerText = " 🔊";
       speakerBtn.style.cursor = "pointer";
-      speakerBtn.onclick = () => playTTS(text); // 누르면 다시 읽어줌
+      speakerBtn.onclick = () => playTTS(text); // 수동 재생
       bubble.appendChild(textSpan);
       bubble.appendChild(speakerBtn);
     } else {
@@ -178,13 +164,10 @@
     return bubble;
   }
 
-  // 💡 [v3.4 수정] 마이크 자동 시작 제거 (수동화)
   function callButler() {
     document.getElementById('overlay').style.display = 'none';
-    unlockAudio(); 
     updateStatus("집사를 호출했습니다. 명령을 내려주세요.");
-    setTimeout(() => { playTTS("네, 주인님. 준비되었습니다."); }, 0);
-    // startListening(); // 강제 시작 제거됨
+    playTTS("네, 주인님. 준비되었습니다."); 
   }
 
   function startListening() {
@@ -219,8 +202,8 @@
     }
   };
 
+  // 💡 [v3.5] 마이크와 TTS 충돌 방지를 위해 unlockAudio() 제거
   function handleMicClick() {
-    unlockAudio(); 
     if (isListening) {
       isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening');
       const totalText = currentUserBubble ? currentUserBubble.innerText : (saveTranscript + finalTranscript);
@@ -233,7 +216,6 @@
 
   function handleEnter(e) { if(e.key === 'Enter') handleTextSubmit(); }
   function handleTextSubmit() {
-    unlockAudio(); 
     const text = document.getElementById('textInput').value;
     if(!text.trim()) return;
     document.getElementById('textInput').value = ""; 
@@ -242,7 +224,6 @@
   }
 
   function requestNaepa() {
-    unlockAudio(); 
     createChatBubble("✨ 냉파 제안해줘", 'user');
     sendToBackend("냉파 제안해줘");
   }
