@@ -14,14 +14,12 @@
     * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
     input[type="text"] { -webkit-user-select: auto; user-select: auto; }
     body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; position: relative; }
-    
     .version-tag { position: absolute; top: 10px; right: 15px; font-size: 0.75rem; color: #666; font-weight: bold; }
-    
     .header { padding: 20px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; display: flex; justify-content: center; align-items: center; position: relative; }
     .status { font-size: 0.8rem; color: #ffcc00; margin-top: 5px; font-weight: bold; text-align: center;}
-    
     #chatContainer { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
-    .bubble { max-width: 80%; padding: 12px 16px; border-radius: 20px; font-size: 1rem; line-height: 1.4; word-break: break-word; }
+    
+    .bubble { max-width: 80%; padding: 12px 16px; border-radius: 20px; font-size: 1rem; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
     .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
     .butler { align-self: flex-start; background: #333; color: #e0e0e0; border-bottom-left-radius: 2px; }
     
@@ -29,18 +27,14 @@
     .btn-row { display: flex; gap: 10px; width: 100%; justify-content: center;}
     .naepa-btn, .inv-btn { background: #333; border: 1px solid #ffcc00; color: #ffcc00; padding: 10px 15px; border-radius: 15px; font-weight: bold; cursor: pointer; flex: 1; font-size: 0.95rem;}
     .inv-btn { border-color: #00e676; color: #00e676; }
-    
     .input-row { display: flex; gap: 8px; width: 100%; align-items: center; justify-content: space-between; }
     #micBtn { width: 50px; height: 50px; border-radius: 50%; border: none; background: #444; color: white; font-size: 1.5rem; cursor: pointer; transition: 0.3s; flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center;}
     #micBtn.listening { background: #ff4444; transform: scale(1.1); box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
-    
     #textInput { flex: 1; min-width: 0; padding: 14px 15px; border-radius: 25px; border: none; background: #333; color: white; font-size: 1rem; outline: none; }
     #sendBtn { width: 65px; padding: 14px 0; border-radius: 25px; border: none; background: #007bff; color: white; font-size: 1rem; font-weight: bold; cursor: pointer; flex-shrink: 0; text-align: center; }
-
     #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
     #startBtn { padding: 20px 40px; font-size: 1.2rem; background: #ffcc00; border:none; border-radius: 50px; font-weight:bold; cursor: pointer; }
-
     #mismatchModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; }
     .mismatch-box { background: #1f1f1f; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .mismatch-title { font-size: 1.2rem; color: #ffcc00; margin-bottom: 15px; font-weight: bold; }
@@ -49,7 +43,6 @@
     #btnOldUnit { background: #007bff; color: white; }
     #btnNewUnit { background: #333; color: white; border: 1px solid #555; }
     .btnCancel { background: none; color: #ff4444; border: none; padding: 10px; font-size: 1rem; margin-top: 5px; cursor: pointer; }
-
     #invModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 2000; flex-direction: column; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #1f1f1f; border-bottom: 1px solid #333; }
     .modal-title { font-size: 1.2rem; font-weight: bold; color: #00e676; }
@@ -78,7 +71,7 @@
 
   <div class="header">
     <div style="font-weight: bold; font-size: 1.2rem;">똑똑한 냉동고 집사</div>
-    <div class="version-tag">v3.7</div>
+    <div class="version-tag">v4.1</div>
   </div>
   <div class="status" id="statusLabel">대기 중...</div>
   
@@ -126,25 +119,49 @@
   let requestStartTime = 0; 
   let currentInventoryData = []; 
   let sortableInstance = null; 
-  let globalUtterance = null; 
+  window.utterances = []; 
 
   recognition.lang = 'ko-KR';
   recognition.continuous = true;    
   recognition.interimResults = true;
 
   function playTTS(text) {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); 
-      setTimeout(() => {
-        globalUtterance = new SpeechSynthesisUtterance(text);
-        globalUtterance.lang = "ko-KR";
-        globalUtterance.rate = 1.1;
-        window.speechSynthesis.speak(globalUtterance);
-      }, 50);
-    }
+    if (!('speechSynthesis' in window)) return;
+    
+    window.speechSynthesis.cancel(); 
+    window.utterances = []; 
+    let cleanText = text.replace(/[*#\-_]/g, '');
+    let sentences = cleanText.split('\n');
+
+    setTimeout(() => {
+      sentences.forEach(sentence => {
+        if (sentence.trim() === '') return;
+        if (sentence.length > 100) {
+           let parts = sentence.split('. ');
+           parts.forEach((part, index) => {
+              let textToSpeak = part.trim() + (index < parts.length - 1 ? "." : "");
+              if(textToSpeak.length > 0) {
+                  let utterance = new SpeechSynthesisUtterance(textToSpeak);
+                  utterance.lang = "ko-KR"; utterance.rate = 1.1;
+                  window.utterances.push(utterance); 
+                  window.speechSynthesis.speak(utterance);
+              }
+           });
+        } else {
+           let utterance = new SpeechSynthesisUtterance(sentence.trim());
+           utterance.lang = "ko-KR"; utterance.rate = 1.1;
+           window.utterances.push(utterance);
+           window.speechSynthesis.speak(utterance);
+        }
+      });
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }, 50);
   }
 
-  function createChatBubble(text, sender) {
+  // 💡 [v4.1] mode 매개변수를 추가하여 스피커 UI를 동적으로 제어
+  function createChatBubble(text, sender, mode = 3) {
     const container = document.getElementById('chatContainer');
     const bubble = document.createElement('div');
     bubble.classList.add('bubble', sender);
@@ -152,12 +169,16 @@
     if (sender === 'butler') {
       const textSpan = document.createElement('span');
       textSpan.innerText = text;
-      const speakerBtn = document.createElement('span');
-      speakerBtn.innerText = " 🔊";
-      speakerBtn.style.cursor = "pointer";
-      speakerBtn.onclick = () => playTTS(text);
       bubble.appendChild(textSpan);
-      bubble.appendChild(speakerBtn);
+
+      // 💡 [v4.1] 모드 2(레시피)가 아닐 때만 수동 스피커 버튼(🔊)을 그려서 오작동 원천 차단
+      if (mode !== 2) {
+        const speakerBtn = document.createElement('span');
+        speakerBtn.innerText = " 🔊";
+        speakerBtn.style.cursor = "pointer";
+        speakerBtn.onclick = () => playTTS(text);
+        bubble.appendChild(speakerBtn);
+      }
     } else {
       bubble.innerText = text;
     }
@@ -195,8 +216,6 @@
     }
     finalTranscript = currentResult;
     if (!currentUserBubble) currentUserBubble = createChatBubble("", 'user');
-    
-    // 💡 [v3.7 핵심 버그 수정] 에러를 일으키던 childNodes 방식을 폐기하고, 사용자의 말풍선은 안전한 innerText로 롤백
     currentUserBubble.innerText = saveTranscript + currentResult; 
   };
 
@@ -212,6 +231,8 @@
       isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening');
       const totalText = currentUserBubble ? currentUserBubble.innerText : (saveTranscript + finalTranscript);
       if (totalText.trim() === "") { updateStatus("인식된 내용이 없습니다."); if(currentUserBubble) currentUserBubble.remove(); return; }
+      
+      playTTS("확인 중입니다.");
       sendToBackend(totalText);
     } else {
       startListening();
@@ -224,11 +245,14 @@
     if(!text.trim()) return;
     document.getElementById('textInput').value = ""; 
     createChatBubble(text, 'user');
+    
+    playTTS("확인 중입니다.");
     sendToBackend(text);
   }
 
   function requestNaepa() {
     createChatBubble("✨ 냉파 제안해줘", 'user');
+    playTTS("주인님, 냉동고를 확인하여 맛있는 레시피를 고민 중입니다. 잠시만 기다려주세요.");
     sendToBackend("냉파 제안해줘");
   }
 
@@ -246,18 +270,29 @@
       if(data.status === "mismatch") {
         showMismatchModal(data.mismatch, data.parsedData, data.response);
       } else {
-        responseFromGemini(data.response);
+        // 💡 백엔드에서 전달받은 mode 값을 프론트엔드로 넘김
+        responseFromGemini(data.response, data.mode);
       }
     })
     .catch(err => updateStatus("통신 오류가 발생했습니다."));
   }
 
-  function responseFromGemini(response) {
+  // 💡 [v4.1] mode 값에 따라 자동 재생(TTS) 내용 완전 분리
+  function responseFromGemini(response, mode) {
     const duration = ((performance.now() - requestStartTime) / 1000).toFixed(2);
     updateStatus(`✅ 처리 완료: ${duration}초`);
     
-    createChatBubble(response, 'butler');
-    setTimeout(() => { playTTS(response); }, 10);
+    createChatBubble(response, 'butler', mode);
+    
+    setTimeout(() => { 
+      if (mode === 2) {
+        // 모드 2일 때는 긴 문장 대신 짧은 안내만 낭독하여 TTS 크래시 완벽 차단
+        playTTS("상세 정보는 화면을 참조해 주세요.");
+      } else {
+        // 모드 1, 3일 때는 정상적으로 읽음
+        playTTS(response); 
+      }
+    }, 10);
   }
 
   function updateStatus(msg) {
@@ -305,7 +340,7 @@
       body: JSON.stringify({ action: "applyResolved", data: pendingData, aiMessage: pendingAiMessage })
     })
     .then(res => res.json())
-    .then(data => responseFromGemini(data.response))
+    .then(data => responseFromGemini(data.response, 3)) // 단위 수정 후는 모드 3으로 간주
     .catch(err => updateStatus("통신 실패"));
   }
 
