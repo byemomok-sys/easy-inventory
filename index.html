@@ -3,13 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <title>똑똑한 냉동고 집사</title>
-  
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-  
   <style>
     * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
     input[type="text"] { -webkit-user-select: auto; user-select: auto; }
@@ -19,72 +14,77 @@
     .status { font-size: 0.8rem; color: #ffcc00; margin-top: 5px; font-weight: bold; text-align: center;}
     #chatContainer { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
     
-    .bubble { max-width: 80%; padding: 12px 16px; border-radius: 20px; font-size: 1rem; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
+    .bubble { max-width: 85%; padding: 12px 16px; border-radius: 20px; font-size: 1rem; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
     .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
     .butler { align-self: flex-start; background: #333; color: #e0e0e0; border-bottom-left-radius: 2px; }
     
+    /* 냉파 제안 칩(버튼) 디자인 */
+    .menu-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; border-top: 1px solid #444; padding-top: 12px;}
+    .menu-chip { background: transparent; border: 1px solid #0079bf; color: #66b2ff; padding: 8px 12px; border-radius: 20px; font-size: 0.95rem; cursor: pointer; transition: 0.2s; flex: 1 1 45%; text-align: center; font-weight: bold;}
+    .menu-chip:active { background: #0079bf; color: white; }
+    .menu-chip.more { border-color: #ffcc00; color: #ffcc00; flex: 1 1 100%; margin-top: 4px;}
+    .menu-chip.more:active { background: #ffcc00; color: black; }
+
     .controls { padding: 15px 15px calc(15px + env(safe-area-inset-bottom)); background: #1f1f1f; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #333; width: 100%; }
     .btn-row { display: flex; gap: 10px; width: 100%; justify-content: center;}
     .naepa-btn, .inv-btn { background: #333; border: 1px solid #ffcc00; color: #ffcc00; padding: 10px 15px; border-radius: 15px; font-weight: bold; cursor: pointer; flex: 1; font-size: 0.95rem;}
     .inv-btn { border-color: #00e676; color: #00e676; }
     .input-row { display: flex; gap: 8px; width: 100%; align-items: center; justify-content: space-between; }
-    #micBtn { width: 50px; height: 50px; border-radius: 50%; border: none; background: #444; color: white; font-size: 1.5rem; cursor: pointer; transition: 0.3s; flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center;}
-    #micBtn.listening { background: #ff4444; transform: scale(1.1); box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); animation: pulse 1.5s infinite; }
+    #micBtn { width: 50px; height: 50px; border-radius: 50%; border: none; background: #444; color: white; font-size: 1.5rem; cursor: pointer; transition: 0.3s; flex-shrink: 0; display: flex; justify-content: center; align-items: center;}
+    #micBtn.listening { background: #ff4444; transform: scale(1.1); animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
     #textInput { flex: 1; min-width: 0; padding: 14px 15px; border-radius: 25px; border: none; background: #333; color: white; font-size: 1rem; outline: none; }
     #sendBtn { width: 65px; padding: 14px 0; border-radius: 25px; border: none; background: #007bff; color: white; font-size: 1rem; font-weight: bold; cursor: pointer; flex-shrink: 0; text-align: center; }
-    #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
-    #startBtn { padding: 20px 40px; font-size: 1.2rem; background: #ffcc00; border:none; border-radius: 50px; font-weight:bold; cursor: pointer; }
+    
     #mismatchModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; }
-    .mismatch-box { background: #1f1f1f; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .mismatch-box { background: #1f1f1f; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; border: 1px solid #444; }
     .mismatch-title { font-size: 1.2rem; color: #ffcc00; margin-bottom: 15px; font-weight: bold; }
     #mismatchText { margin-bottom: 25px; line-height: 1.5; font-size: 1.05rem; }
     .mismatch-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
     #btnOldUnit { background: #007bff; color: white; }
     #btnNewUnit { background: #333; color: white; border: 1px solid #555; }
     .btnCancel { background: none; color: #ff4444; border: none; padding: 10px; font-size: 1rem; margin-top: 5px; cursor: pointer; }
-    #invModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 2000; flex-direction: column; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #1f1f1f; border-bottom: 1px solid #333; }
-    .modal-title { font-size: 1.2rem; font-weight: bold; color: #00e676; }
+
+    /* 모던 칸반 보드 UI (Trello 테마) */
+    #invModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0079bf; z-index: 2000; flex-direction: column; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+    .modal-title { font-size: 1.2rem; font-weight: bold; color: #ffffff; }
     .close-btn, .save-btn { background: none; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; padding: 5px; }
-    .close-btn { color: #ff4444; }
-    .save-btn { color: #007bff; }
-    .inv-list-container { flex: 1; overflow-y: auto; padding: 0 10px; }
-    .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 5px; border-bottom: 1px solid #2a2a2a; background: transparent; }
-    .item-left { display: flex; align-items: center; flex: 1; overflow: hidden; }
-    .drag-handle { font-size: 1.5rem; color: #666; padding: 0 8px 0 0; cursor: grab; }
-    .extreme-sort { display: flex; flex-direction: column; gap: 4px; padding-right: 12px; }
-    .extreme-sort button { background: none; border: none; font-size: 0.9rem; padding: 0; color: #888; }
-    .item-name { font-weight: bold; font-size: 1.15rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; cursor: pointer; }
-    .item-controls { display: flex; align-items: center; gap: 10px; }
-    .qty-btn { width: 35px; height: 35px; border-radius: 6px; border: none; background: #333; color: white; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
-    .qty-display { min-width: 40px; text-align: center; font-weight: bold; font-size: 1.2rem; display: flex; align-items: baseline; justify-content: center; }
-    .unit-text { font-size: 0.8rem; color: #aaa; margin-left: 2px; font-weight: normal; }
-    .del-btn { background: none; border: none; color: #ff4444; font-size: 1.3rem; padding-left: 5px; }
+    .close-btn { color: #ffcccc; }
+    .save-btn { color: #ffffff; background: rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 6px;}
+    
+    .kanban-board { flex: 1; display: flex; overflow-x: auto; padding: 15px; gap: 15px; scroll-snap-type: x mandatory; align-items: flex-start;}
+    .kanban-column { min-width: 270px; max-width: 270px; background: #ebecf0; border-radius: 10px; display: flex; flex-direction: column; max-height: 100%; scroll-snap-align: start; box-shadow: 0 4px 10px rgba(0,0,0,0.2);}
+    .kanban-header { padding: 14px 15px 10px 15px; font-weight: 800; color: #172b4d; font-size: 1.1rem; border-top-left-radius: 10px; border-top-right-radius: 10px;}
+    .kanban-cards { flex: 1; overflow-y: auto; padding: 0 10px 10px 10px; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+    
+    .kanban-card { background: white; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(9, 30, 66, 0.25); color: #172b4d; cursor: grab; display: flex; flex-direction: column; gap: 8px; border: 1px solid transparent; transition: border 0.2s, opacity 0.2s;}
+    .kanban-card:active { border: 1px solid #0079bf; cursor: grabbing; }
+    .card-top { display: flex; align-items: flex-start; }
+    .drag-handle { color: #6b778c; margin-right: 10px; font-size: 1.3rem; padding-top: 2px; }
+    .card-name { font-weight: 700; font-size: 1.05rem; flex: 1; word-break: break-word; line-height: 1.3; cursor: pointer; }
+    .card-bottom { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+    .qty-btn { background: #091e420f; border: none; border-radius: 6px; width: 32px; height: 32px; font-weight: bold; color: #172b4d; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .qty-display { font-weight: 800; font-size: 1.1rem; color: #172b4d; min-width: 45px; text-align: center; display: flex; align-items: baseline; justify-content: center;}
+    .unit-text { font-size: 0.8rem; color: #6b778c; font-weight: normal; margin-left: 3px;}
+    .del-btn { background: none; border: none; color: #de350b; font-size: 1.3rem; cursor: pointer; margin-left: 8px; padding: 0; padding-bottom: 2px;}
+    .sortable-ghost { opacity: 0.4; background-color: #f4f5f7; border: 1px dashed #0079bf; }
   </style>
 </head>
 <body>
 
-  <div id="overlay">
-    <button id="startBtn" onclick="callButler()">집사 부르기</button>
-  </div>
-
-  <div class="header">
-    <div style="font-weight: bold; font-size: 1.2rem;">똑똑한 냉동고 집사</div>
-    <div class="version-tag">v4.1</div>
-  </div>
+  <div class="header"><div style="font-weight: bold; font-size: 1.2rem;">똑똑한 냉동고 집사</div><div class="version-tag">v4.5</div></div>
   <div class="status" id="statusLabel">대기 중...</div>
-  
   <div id="chatContainer"></div>
   
   <div class="controls">
     <div class="btn-row">
       <button class="naepa-btn" onclick="requestNaepa()">✨ 냉파 제안</button>
-      <button class="inv-btn" onclick="openInventory()">📋 열어보기</button>
+      <button class="inv-btn" onclick="openInventory()">📋 보드 열기</button>
     </div>
     <div class="input-row">
       <button id="micBtn" onclick="handleMicClick()">🎤</button>
-      <input type="text" id="textInput" placeholder="품목과 수량 입력..." onkeypress="handleEnter(event)">
+      <input type="text" id="textInput" placeholder="품목 위치와 수량 입력..." onkeypress="handleEnter(event)">
       <button id="sendBtn" onclick="handleTextSubmit()">전송</button>
     </div>
   </div>
@@ -101,38 +101,25 @@
 
   <div id="invModal">
     <div class="modal-header">
-      <button class="close-btn" onclick="closeInventory()">취소</button>
-      <div class="modal-title">냉동고 전체 재고</div>
+      <button class="close-btn" onclick="closeInventory()">닫기</button>
+      <div class="modal-title">냉동고 창고 보드</div>
       <button class="save-btn" onclick="saveInventory()">저장</button>
     </div>
-    <div class="inv-list-container" id="invList"></div>
+    <div class="kanban-board" id="invList"></div>
   </div>
 
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP5lCFozQRiP7LAHwtkeT104NLzUfPSBwN_v1ZEoOc8hQ2W5lVi97FJ9xVEN79WEoY/exec";
-  
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  let isListening = false;
-  let finalTranscript = "";      
-  let saveTranscript = "";       
-  let currentUserBubble = null;
-  let requestStartTime = 0; 
-  let currentInventoryData = []; 
-  let sortableInstance = null; 
-  window.utterances = []; 
+  let isListening = false; let finalTranscript = ""; let saveTranscript = ""; 
+  let requestStartTime = 0; let currentInventoryData = []; window.utterances = []; 
 
-  recognition.lang = 'ko-KR';
-  recognition.continuous = true;    
-  recognition.interimResults = true;
+  recognition.lang = 'ko-KR'; recognition.continuous = true; recognition.interimResults = true;
 
   function playTTS(text) {
     if (!('speechSynthesis' in window)) return;
-    
-    window.speechSynthesis.cancel(); 
-    window.utterances = []; 
-    let cleanText = text.replace(/[*#\-_]/g, '');
-    let sentences = cleanText.split('\n');
-
+    window.speechSynthesis.cancel(); window.utterances = []; 
+    let cleanText = text.replace(/[*#\-_]/g, ''); let sentences = cleanText.split('\n');
     setTimeout(() => {
       sentences.forEach(sentence => {
         if (sentence.trim() === '') return;
@@ -140,85 +127,56 @@
            let parts = sentence.split('. ');
            parts.forEach((part, index) => {
               let textToSpeak = part.trim() + (index < parts.length - 1 ? "." : "");
-              if(textToSpeak.length > 0) {
-                  let utterance = new SpeechSynthesisUtterance(textToSpeak);
-                  utterance.lang = "ko-KR"; utterance.rate = 1.1;
-                  window.utterances.push(utterance); 
-                  window.speechSynthesis.speak(utterance);
-              }
+              if(textToSpeak.length > 0) { let utterance = new SpeechSynthesisUtterance(textToSpeak); utterance.lang = "ko-KR"; utterance.rate = 1.1; window.utterances.push(utterance); window.speechSynthesis.speak(utterance); }
            });
-        } else {
-           let utterance = new SpeechSynthesisUtterance(sentence.trim());
-           utterance.lang = "ko-KR"; utterance.rate = 1.1;
-           window.utterances.push(utterance);
-           window.speechSynthesis.speak(utterance);
-        }
+        } else { let utterance = new SpeechSynthesisUtterance(sentence.trim()); utterance.lang = "ko-KR"; utterance.rate = 1.1; window.utterances.push(utterance); window.speechSynthesis.speak(utterance); }
       });
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-      }
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
     }, 50);
   }
 
-  // 💡 [v4.1] mode 매개변수를 추가하여 스피커 UI를 동적으로 제어
-  function createChatBubble(text, sender, mode = 3) {
-    const container = document.getElementById('chatContainer');
-    const bubble = document.createElement('div');
+  function createChatBubble(text, sender, mode = 3, menus = null) {
+    const container = document.getElementById('chatContainer'); const bubble = document.createElement('div');
     bubble.classList.add('bubble', sender);
-
     if (sender === 'butler') {
-      const textSpan = document.createElement('span');
-      textSpan.innerText = text;
-      bubble.appendChild(textSpan);
-
-      // 💡 [v4.1] 모드 2(레시피)가 아닐 때만 수동 스피커 버튼(🔊)을 그려서 오작동 원천 차단
-      if (mode !== 2) {
-        const speakerBtn = document.createElement('span');
-        speakerBtn.innerText = " 🔊";
-        speakerBtn.style.cursor = "pointer";
-        speakerBtn.onclick = () => playTTS(text);
-        bubble.appendChild(speakerBtn);
+      const textSpan = document.createElement('span'); textSpan.innerText = text; bubble.appendChild(textSpan);
+      if (mode !== 2 && mode !== 1) {
+        const speakerBtn = document.createElement('span'); speakerBtn.innerText = " 🔊"; speakerBtn.style.cursor = "pointer";
+        speakerBtn.onclick = () => playTTS(text); bubble.appendChild(speakerBtn);
       }
-    } else {
-      bubble.innerText = text;
-    }
-
-    container.appendChild(bubble);
-    container.scrollTop = container.scrollHeight;
-    return bubble;
+      if (menus && menus.length > 0) {
+        let chipsDiv = document.createElement('div'); chipsDiv.className = 'menu-chips';
+        menus.forEach(m => {
+          let btn = document.createElement('button'); btn.className = 'menu-chip'; btn.innerText = m;
+          btn.onclick = () => { createChatBubble(m + " 레시피 알려줘", 'user'); playTTS("레시피를 준비하겠습니다."); sendToBackend(m + " 레시피 알려줘"); };
+          chipsDiv.appendChild(btn);
+        });
+        let moreBtn = document.createElement('button'); moreBtn.className = 'menu-chip more'; moreBtn.innerText = "🔄 다른 메뉴 추천받기";
+        moreBtn.onclick = () => requestNaepa(); chipsDiv.appendChild(moreBtn);
+        bubble.appendChild(chipsDiv);
+      }
+    } else { bubble.innerText = text; }
+    container.appendChild(bubble); container.scrollTop = container.scrollHeight; return bubble;
   }
 
-  function callButler() {
-    document.getElementById('overlay').style.display = 'none';
-    updateStatus("집사를 호출했습니다. 명령을 내려주세요.");
-    playTTS("네, 주인님. 준비되었습니다."); 
+  function startListening() { 
+    if (isListening) return; 
+    try { 
+      finalTranscript = ""; saveTranscript = document.getElementById('textInput').value; 
+      if(saveTranscript.length > 0 && !saveTranscript.endsWith(' ')) saveTranscript += ' ';
+      recognition.start(); 
+    } catch (e) { setTimeout(() => recognition.start(), 200); } 
   }
-
-  function startListening() {
-    if (isListening) return;
-    try {
-      finalTranscript = ""; saveTranscript = ""; currentUserBubble = null;
-      recognition.start();
-    } catch (e) { setTimeout(() => recognition.start(), 200); }
-  }
-
-  recognition.onstart = function() {
-    isListening = true; updateStatus("🎤 듣고 있습니다...");
-    document.getElementById('micBtn').classList.add('listening');
-  };
-
+  
+  recognition.onstart = function() { isListening = true; updateStatus("🎤 듣고 있습니다..."); document.getElementById('micBtn').classList.add('listening'); };
+  
   recognition.onresult = function(event) {
     let currentResult = "";
-    if (/Android/i.test(navigator.userAgent)) {
-      currentResult = event.results[event.results.length - 1][0].transcript;
-    } else {
-      for (let i = 0; i < event.results.length; i++) currentResult += event.results[i][0].transcript;
-    }
-    finalTranscript = currentResult;
-    if (!currentUserBubble) currentUserBubble = createChatBubble("", 'user');
-    currentUserBubble.innerText = saveTranscript + currentResult; 
+    if (/Android/i.test(navigator.userAgent)) { currentResult = event.results[event.results.length - 1][0].transcript; } 
+    else { for (let i = 0; i < event.results.length; i++) currentResult += event.results[i][0].transcript; }
+    finalTranscript = currentResult; document.getElementById('textInput').value = saveTranscript + currentResult; 
   };
-
+  
   recognition.onend = function() {
     if (isListening && /Android/i.test(navigator.userAgent)) {
       if (finalTranscript.trim() !== "") { saveTranscript += finalTranscript + " "; finalTranscript = ""; }
@@ -227,208 +185,93 @@
   };
 
   function handleMicClick() {
-    if (isListening) {
-      isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening');
-      const totalText = currentUserBubble ? currentUserBubble.innerText : (saveTranscript + finalTranscript);
-      if (totalText.trim() === "") { updateStatus("인식된 내용이 없습니다."); if(currentUserBubble) currentUserBubble.remove(); return; }
-      
-      playTTS("확인 중입니다.");
-      sendToBackend(totalText);
-    } else {
-      startListening();
-    }
+    if (isListening) { isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening'); updateStatus("입력 대기 중 (수정 및 전송 가능)"); } 
+    else { startListening(); }
   }
 
   function handleEnter(e) { if(e.key === 'Enter') handleTextSubmit(); }
   function handleTextSubmit() {
-    const text = document.getElementById('textInput').value;
-    if(!text.trim()) return;
-    document.getElementById('textInput').value = ""; 
-    createChatBubble(text, 'user');
-    
-    playTTS("확인 중입니다.");
-    sendToBackend(text);
+    if (isListening) { isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening'); }
+    const text = document.getElementById('textInput').value; if(!text.trim()) return;
+    document.getElementById('textInput').value = ""; createChatBubble(text, 'user'); playTTS("확인 중입니다."); sendToBackend(text);
   }
 
-  function requestNaepa() {
-    createChatBubble("✨ 냉파 제안해줘", 'user');
-    playTTS("주인님, 냉동고를 확인하여 맛있는 레시피를 고민 중입니다. 잠시만 기다려주세요.");
-    sendToBackend("냉파 제안해줘");
-  }
+  function requestNaepa() { createChatBubble("✨ 냉파 제안해줘", 'user'); playTTS("맞춤형 요리 6가지를 엄선하겠습니다."); sendToBackend("냉파 제안해줘"); }
 
   function sendToBackend(text) {
-    requestStartTime = performance.now();
-    updateStatus("⌛ 구글 서버와 통신 중...");
-    
-    fetch(GAS_WEB_APP_URL, {
-      method: "POST", redirect: "follow", 
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ text: text })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if(data.status === "mismatch") {
-        showMismatchModal(data.mismatch, data.parsedData, data.response);
-      } else {
-        // 💡 백엔드에서 전달받은 mode 값을 프론트엔드로 넘김
-        responseFromGemini(data.response, data.mode);
-      }
-    })
-    .catch(err => updateStatus("통신 오류가 발생했습니다."));
+    requestStartTime = performance.now(); updateStatus("⌛ 구글 서버와 통신 중...");
+    fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ text: text }) })
+    .then(response => response.json()).then(data => {
+      if(data.status === "mismatch") showMismatchModal(data.mismatch, data.parsedData, data.response);
+      else responseFromGemini(data.response, data.mode, data.menus);
+    }).catch(err => updateStatus("통신 오류가 발생했습니다."));
   }
 
-  // 💡 [v4.1] mode 값에 따라 자동 재생(TTS) 내용 완전 분리
-  function responseFromGemini(response, mode) {
-    const duration = ((performance.now() - requestStartTime) / 1000).toFixed(2);
-    updateStatus(`✅ 처리 완료: ${duration}초`);
-    
-    createChatBubble(response, 'butler', mode);
-    
-    setTimeout(() => { 
-      if (mode === 2) {
-        // 모드 2일 때는 긴 문장 대신 짧은 안내만 낭독하여 TTS 크래시 완벽 차단
-        playTTS("상세 정보는 화면을 참조해 주세요.");
-      } else {
-        // 모드 1, 3일 때는 정상적으로 읽음
-        playTTS(response); 
-      }
-    }, 10);
+  function responseFromGemini(response, mode, menus) {
+    const duration = ((performance.now() - requestStartTime) / 1000).toFixed(2); updateStatus(`✅ 처리 완료: ${duration}초`);
+    createChatBubble(response, 'butler', mode, menus);
+    setTimeout(() => { if (mode === 2) { playTTS("상세 정보는 화면을 참조해 주세요."); } else if(mode === 1) { playTTS("화면에서 원하시는 메뉴를 선택해 주세요."); } else { playTTS(response); } }, 10);
   }
 
-  function updateStatus(msg) {
-    const el = document.getElementById('statusLabel');
-    if(el) el.innerText = msg;
-  }
+  function updateStatus(msg) { const el = document.getElementById('statusLabel'); if(el) el.innerText = msg; }
 
-  // ==================================================
-  // 단위 충돌 팝업 로직
-  // ==================================================
-  let pendingData = [];
-  let pendingAiMessage = "";
-  let currentMismatch = null;
-
+  let pendingData = []; let pendingAiMessage = ""; let currentMismatch = null;
   function showMismatchModal(mismatch, parsedData, aiMsg) {
-    pendingData = parsedData;
-    pendingAiMessage = aiMsg;
-    currentMismatch = mismatch;
-
+    pendingData = parsedData; pendingAiMessage = aiMsg; currentMismatch = mismatch;
     document.getElementById('mismatchText').innerHTML = `<b style="color:#00e676; font-size:1.3rem;">${mismatch.item}</b> 품목이<br>기존에는 <b>'${mismatch.oldUnit}'</b> 단위입니다.<br><br>어떻게 저장할까요?`;
-    
-    const btnOld = document.getElementById('btnOldUnit');
-    btnOld.innerText = `기존 '${mismatch.oldUnit}'(으)로 통합`;
-    btnOld.onclick = () => resolveMismatch(mismatch.oldUnit);
-    
-    const btnNew = document.getElementById('btnNewUnit');
-    btnNew.innerText = `새로운 '${mismatch.newUnit}'(으)로 추가`;
-    btnNew.onclick = () => resolveMismatch(mismatch.newUnit);
-
-    document.getElementById('mismatchModal').style.display = 'flex';
-    playTTS(`${mismatch.item} 단위가 다릅니다. 화면에서 선택해주세요.`);
+    const btnOld = document.getElementById('btnOldUnit'); btnOld.innerText = `기존 '${mismatch.oldUnit}'(으)로 통합`; btnOld.onclick = () => resolveMismatch(mismatch.oldUnit);
+    const btnNew = document.getElementById('btnNewUnit'); btnNew.innerText = `새로운 '${mismatch.newUnit}'(으)로 추가`; btnNew.onclick = () => resolveMismatch(mismatch.newUnit);
+    document.getElementById('mismatchModal').style.display = 'flex'; playTTS(`${mismatch.item} 단위가 다릅니다. 화면에서 선택해주세요.`);
   }
 
   function resolveMismatch(chosenUnit) {
-    document.getElementById('mismatchModal').style.display = 'none';
-    updateStatus("⌛ 단위를 반영하여 저장 중...");
-    
-    pendingData.forEach(item => {
-      if(item.item === currentMismatch.item) item.unit = chosenUnit;
-    });
-
-    fetch(GAS_WEB_APP_URL, {
-      method: "POST", redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "applyResolved", data: pendingData, aiMessage: pendingAiMessage })
-    })
-    .then(res => res.json())
-    .then(data => responseFromGemini(data.response, 3)) // 단위 수정 후는 모드 3으로 간주
-    .catch(err => updateStatus("통신 실패"));
+    document.getElementById('mismatchModal').style.display = 'none'; updateStatus("⌛ 단위를 반영하여 저장 중...");
+    pendingData.forEach(item => { if(item.item === currentMismatch.item) item.unit = chosenUnit; });
+    fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "applyResolved", data: pendingData, aiMessage: pendingAiMessage }) })
+    .then(res => res.json()).then(data => responseFromGemini(data.response, 3)).catch(err => updateStatus("통신 실패"));
   }
 
-  // ==================================================
-  // 재고관리 모달 로직
-  // ==================================================
   function openInventory() {
-    document.getElementById('invModal').style.display = 'flex';
-    document.getElementById('invList').innerHTML = "<div style='text-align:center; margin-top:50px; color:#aaa;'>데이터 불러오는 중...</div>";
-    fetch(GAS_WEB_APP_URL, {
-      method: "POST", redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "getInventory" })
-    })
-    .then(res => res.json())
-    .then(resData => { if(resData.status === "success") { currentInventoryData = resData.data; renderInventoryList(); } })
-    .catch(e => { document.getElementById('invList').innerHTML = "<div style='color:red; text-align:center;'>통신 실패</div>"; });
+    document.getElementById('invModal').style.display = 'flex'; document.getElementById('invList').innerHTML = "<div style='color:white; margin:20px;'>데이터 불러오는 중...</div>";
+    fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "getInventory" }) })
+    .then(res => res.json()).then(resData => { if(resData.status === "success") { currentInventoryData = resData.data; renderInventoryList(); } }).catch(e => { document.getElementById('invList').innerHTML = "<div style='color:red;'>통신 실패</div>"; });
   }
 
   function closeInventory() { document.getElementById('invModal').style.display = 'none'; }
 
   function renderInventoryList() {
-    const listContainer = document.getElementById('invList');
-    listContainer.innerHTML = "";
-    if(currentInventoryData.length === 0) { listContainer.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>냉동고가 비어있습니다.</div>"; return; }
+    const board = document.getElementById('invList'); board.innerHTML = "";
+    let grouped = {}; currentInventoryData.forEach((item) => { let loc = item.location || "미지정"; if(!grouped[loc]) grouped[loc] = []; grouped[loc].push(item); });
+    if(Object.keys(grouped).length === 0) { board.innerHTML = "<div style='color:white; margin:20px;'>냉동고가 비어있습니다.</div>"; return; }
 
-    currentInventoryData.forEach((item, index) => {
-      const itemDiv = document.createElement('div');
-      itemDiv.className = 'inv-item';
-      itemDiv.innerHTML = `
-        <div class="item-left">
-          <div class="drag-handle">☰</div>
-          <div class="extreme-sort">
-            <button onclick="moveToExtreme(${index}, 'top')">⏫</button>
-            <button onclick="moveToExtreme(${index}, 'bottom')">⏬</button>
-          </div>
-          <div class="item-name" onclick="editItemName(${index})">${item.item}</div>
-        </div>
-        <div class="item-controls">
-          <button class="qty-btn" onclick="changeQty(${index}, -1)">-</button>
-          <div class="qty-display">${item.qty}<span class="unit-text">${item.unit}</span></div>
-          <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
-          <button class="del-btn" onclick="deleteItem(${index})">✕</button>
-        </div>
-      `;
-      listContainer.appendChild(itemDiv);
-    });
-
-    if (sortableInstance) sortableInstance.destroy();
-    sortableInstance = new Sortable(listContainer, {
-      handle: '.drag-handle', animation: 150,
-      onEnd: function (evt) {
-        const movedItem = currentInventoryData.splice(evt.oldIndex, 1)[0];
-        currentInventoryData.splice(evt.newIndex, 0, movedItem);
-      }
-    });
+    for(let loc in grouped) {
+       const col = document.createElement('div'); col.className = 'kanban-column'; col.setAttribute('data-location', loc);
+       col.innerHTML = `<div class="kanban-header">${loc}</div><div class="kanban-cards" id="cards-${loc}"></div>`;
+       board.appendChild(col);
+       const cardsContainer = col.querySelector('.kanban-cards');
+       grouped[loc].forEach(item => {
+          const card = document.createElement('div'); card.className = 'kanban-card'; card.setAttribute('data-name', item.item); card.setAttribute('data-qty', item.qty); card.setAttribute('data-unit', item.unit);
+          card.innerHTML = `<div class="card-top"><div class="drag-handle">☰</div><div class="card-name" onclick="editCardName(this)">${item.item}</div></div><div class="card-bottom"><button class="qty-btn" onclick="changeCardQty(this, -1)">-</button><div class="qty-display">${item.qty}<span class="unit-text">${item.unit}</span></div><button class="qty-btn" onclick="changeCardQty(this, 1)">+</button><button class="del-btn" onclick="deleteCard(this)">✕</button></div>`;
+          cardsContainer.appendChild(card);
+       });
+       new Sortable(cardsContainer, { group: 'shared', handle: '.drag-handle', animation: 150, ghostClass: 'sortable-ghost' });
+    }
   }
 
-  function editItemName(index) {
-    const newName = prompt("품목의 이름을 수정하세요:", currentInventoryData[index].item);
-    if (newName !== null && newName.trim() !== "") { currentInventoryData[index].item = newName.trim(); renderInventoryList(); }
+  function editCardName(element) { let card = element.closest('.kanban-card'); let currentName = card.getAttribute('data-name'); let newName = prompt("품목명을 수정하세요:", currentName); if(newName && newName.trim() !== "") { card.setAttribute('data-name', newName.trim()); element.innerText = newName.trim(); } }
+  function changeCardQty(btn, delta) { 
+    let card = btn.closest('.kanban-card'); let currentQty = Number(card.getAttribute('data-qty')); let newQty = currentQty + delta; if(newQty < 0) newQty = 0; 
+    card.setAttribute('data-qty', newQty); let unit = card.getAttribute('data-unit'); card.querySelector('.qty-display').innerHTML = `${newQty}<span class="unit-text">${unit}</span>`; 
+    if(newQty === 0) { card.style.opacity = "0.4"; } else { card.style.opacity = "1"; }
   }
-  function moveToExtreme(index, position) {
-    const movedItem = currentInventoryData.splice(index, 1)[0];
-    position === 'top' ? currentInventoryData.unshift(movedItem) : currentInventoryData.push(movedItem);
-    renderInventoryList();
-  }
-  function changeQty(index, delta) {
-    let newQty = Number(currentInventoryData[index].qty) + delta;
-    currentInventoryData[index].qty = newQty < 0 ? 0 : newQty;
-    renderInventoryList();
-  }
-  function deleteItem(index) {
-    if(confirm(`'${currentInventoryData[index].item}' 항목을 삭제하시겠습니까?`)) { currentInventoryData.splice(index, 1); renderInventoryList(); }
-  }
+  function deleteCard(btn) { let card = btn.closest('.kanban-card'); let name = card.getAttribute('data-name'); if(confirm(`'${name}' 항목을 삭제하시겠습니까?`)) { card.remove(); } }
+  
   function saveInventory() {
-    const saveBtn = document.querySelector('.save-btn');
-    saveBtn.innerText = "저장중.."; saveBtn.disabled = true;
-    fetch(GAS_WEB_APP_URL, {
-      method: "POST", redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "saveInventory", data: currentInventoryData })
-    })
-    .then(res => res.json())
-    .then(resData => {
-      saveBtn.innerText = "저장"; saveBtn.disabled = false; closeInventory(); updateStatus("✅ " + resData.message);
-    })
-    .catch(e => { saveBtn.innerText = "저장"; saveBtn.disabled = false; alert("저장 실패"); });
+    let newData = [];
+    document.querySelectorAll('.kanban-column').forEach(col => { let loc = col.getAttribute('data-location'); col.querySelectorAll('.kanban-card').forEach(card => { newData.push({ item: card.getAttribute('data-name'), qty: Number(card.getAttribute('data-qty')), unit: card.getAttribute('data-unit'), location: loc }); }); });
+    const saveBtn = document.querySelector('.save-btn'); saveBtn.innerText = "저장중.."; saveBtn.disabled = true;
+    fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "saveInventory", data: newData }) })
+    .then(res => res.json()).then(resData => { saveBtn.innerText = "저장"; saveBtn.disabled = false; closeInventory(); updateStatus("✅ " + resData.message); }).catch(e => { saveBtn.innerText = "저장"; saveBtn.disabled = false; alert("저장 실패"); });
   }
 </script>
 </body>
