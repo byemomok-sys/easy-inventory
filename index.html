@@ -3,39 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="icon" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>똑똑한 냉동고 집사</title>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
   <style>
     * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
     input[type="text"] { -webkit-user-select: auto; user-select: auto; }
     body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; position: relative; }
-    .version-tag { position: absolute; top: 10px; right: 15px; font-size: 0.75rem; color: #666; font-weight: bold; }
-    .header { padding: 20px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; display: flex; justify-content: center; align-items: center; position: relative; }
-    .status { font-size: 0.8rem; color: #ffcc00; margin-top: 5px; font-weight: bold; text-align: center;}
-    #chatContainer { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
+    .version-tag { position: absolute; top: 10px; right: 15px; font-size: 0.7rem; color: #666; font-weight: bold; }
+    .header { padding: 15px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; position: relative; }
+    .status { font-size: 0.75rem; color: #ffcc00; margin-top: 3px; font-weight: bold; text-align: center;}
+    #chatContainer { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
     
-    .bubble { max-width: 85%; padding: 12px 16px; border-radius: 20px; font-size: 1rem; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
+    .bubble { max-width: 90%; padding: 10px 14px; border-radius: 18px; font-size: 0.95rem; line-height: 1.3; white-space: pre-wrap; word-break: keep-all; }
     .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
     .butler { align-self: flex-start; background: #333; color: #e0e0e0; border-bottom-left-radius: 2px; }
     
-    /* 냉파 제안 칩(버튼) 디자인 */
-    .menu-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; border-top: 1px solid #444; padding-top: 12px;}
-    .menu-chip { background: transparent; border: 1px solid #0079bf; color: #66b2ff; padding: 8px 12px; border-radius: 20px; font-size: 0.95rem; cursor: pointer; transition: 0.2s; flex: 1 1 45%; text-align: center; font-weight: bold;}
+    /* 💡 [v4.6] 냉파 제안: 1열 6줄 세로 정렬 및 단어 잘림(word-break) 방지 */
+    .menu-chips { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px solid #444; padding-top: 10px;}
+    .menu-chip { background: #1f1f1f; border: 1px solid #0079bf; color: #66b2ff; padding: 10px; border-radius: 10px; font-size: 0.9rem; cursor: pointer; text-align: left; font-weight: bold; width: 100%; word-break: keep-all; }
     .menu-chip:active { background: #0079bf; color: white; }
-    .menu-chip.more { border-color: #ffcc00; color: #ffcc00; flex: 1 1 100%; margin-top: 4px;}
-    .menu-chip.more:active { background: #ffcc00; color: black; }
+    .menu-chip.more { border-color: #ffcc00; color: #ffcc00; text-align: center; margin-top: 5px;}
 
-    .controls { padding: 15px 15px calc(15px + env(safe-area-inset-bottom)); background: #1f1f1f; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #333; width: 100%; }
-    .btn-row { display: flex; gap: 10px; width: 100%; justify-content: center;}
-    .naepa-btn, .inv-btn { background: #333; border: 1px solid #ffcc00; color: #ffcc00; padding: 10px 15px; border-radius: 15px; font-weight: bold; cursor: pointer; flex: 1; font-size: 0.95rem;}
+    .controls { padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); background: #1f1f1f; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #333; }
+    .btn-row { display: flex; gap: 8px; justify-content: center;}
+    .naepa-btn, .inv-btn { background: #333; border: 1px solid #ffcc00; color: #ffcc00; padding: 10px; border-radius: 12px; font-weight: bold; flex: 1; font-size: 0.9rem;}
     .inv-btn { border-color: #00e676; color: #00e676; }
-    .input-row { display: flex; gap: 8px; width: 100%; align-items: center; justify-content: space-between; }
-    #micBtn { width: 50px; height: 50px; border-radius: 50%; border: none; background: #444; color: white; font-size: 1.5rem; cursor: pointer; transition: 0.3s; flex-shrink: 0; display: flex; justify-content: center; align-items: center;}
-    #micBtn.listening { background: #ff4444; transform: scale(1.1); animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
-    #textInput { flex: 1; min-width: 0; padding: 14px 15px; border-radius: 25px; border: none; background: #333; color: white; font-size: 1rem; outline: none; }
-    #sendBtn { width: 65px; padding: 14px 0; border-radius: 25px; border: none; background: #007bff; color: white; font-size: 1rem; font-weight: bold; cursor: pointer; flex-shrink: 0; text-align: center; }
     
+    .input-row { display: flex; gap: 6px; align-items: center; }
+    #micBtn { width: 46px; height: 46px; border-radius: 50%; border: none; background: #444; color: white; font-size: 1.3rem; display: flex; justify-content: center; align-items: center;}
+    #micBtn.listening { background: #ff4444; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    #textInput { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #333; color: white; font-size: 0.95rem; outline: none; }
+    #sendBtn { width: 55px; padding: 12px 0; border-radius: 20px; border: none; background: #007bff; color: white; font-size: 0.95rem; font-weight: bold; }
+
     #mismatchModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; }
     .mismatch-box { background: #1f1f1f; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; border: 1px solid #444; }
     .mismatch-title { font-size: 1.2rem; color: #ffcc00; margin-bottom: 15px; font-weight: bold; }
@@ -45,42 +49,42 @@
     #btnNewUnit { background: #333; color: white; border: 1px solid #555; }
     .btnCancel { background: none; color: #ff4444; border: none; padding: 10px; font-size: 1rem; margin-top: 5px; cursor: pointer; }
 
-    /* 모던 칸반 보드 UI (Trello 테마) */
+    /* 💡 [v4.6] 가로형 칸반 보드 및 여백 최소화 */
     #invModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0079bf; z-index: 2000; flex-direction: column; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-    .modal-title { font-size: 1.2rem; font-weight: bold; color: #ffffff; }
-    .close-btn, .save-btn { background: none; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; padding: 5px; }
-    .close-btn { color: #ffcccc; }
-    .save-btn { color: #ffffff; background: rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 6px;}
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: rgba(0, 0, 0, 0.2); }
+    .close-btn { color: #ffcccc; background: none; border: none; font-weight: bold; font-size: 1rem; padding: 5px; cursor: pointer; }
+    .save-btn { color: white; background: #28a745; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;}
     
-    .kanban-board { flex: 1; display: flex; overflow-x: auto; padding: 15px; gap: 15px; scroll-snap-type: x mandatory; align-items: flex-start;}
-    .kanban-column { min-width: 270px; max-width: 270px; background: #ebecf0; border-radius: 10px; display: flex; flex-direction: column; max-height: 100%; scroll-snap-align: start; box-shadow: 0 4px 10px rgba(0,0,0,0.2);}
-    .kanban-header { padding: 14px 15px 10px 15px; font-weight: 800; color: #172b4d; font-size: 1.1rem; border-top-left-radius: 10px; border-top-right-radius: 10px;}
-    .kanban-cards { flex: 1; overflow-y: auto; padding: 0 10px 10px 10px; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+    .kanban-board { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+    .kanban-row { display: flex; background: rgba(235, 236, 240, 0.95); border-radius: 8px; min-height: 70px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .row-header { width: 70px; min-width: 70px; padding: 8px 4px; font-weight: 800; color: #172b4d; font-size: 0.85rem; border-right: 1px solid #ccc; display: flex; align-items: center; justify-content: center; text-align: center; }
+    .row-cards { flex: 1; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding: 6px; min-height: 50px; }
     
-    .kanban-card { background: white; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(9, 30, 66, 0.25); color: #172b4d; cursor: grab; display: flex; flex-direction: column; gap: 8px; border: 1px solid transparent; transition: border 0.2s, opacity 0.2s;}
-    .kanban-card:active { border: 1px solid #0079bf; cursor: grabbing; }
-    .card-top { display: flex; align-items: flex-start; }
-    .drag-handle { color: #6b778c; margin-right: 10px; font-size: 1.3rem; padding-top: 2px; }
-    .card-name { font-weight: 700; font-size: 1.05rem; flex: 1; word-break: break-word; line-height: 1.3; cursor: pointer; }
-    .card-bottom { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
-    .qty-btn { background: #091e420f; border: none; border-radius: 6px; width: 32px; height: 32px; font-weight: bold; color: #172b4d; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-    .qty-display { font-weight: 800; font-size: 1.1rem; color: #172b4d; min-width: 45px; text-align: center; display: flex; align-items: baseline; justify-content: center;}
-    .unit-text { font-size: 0.8rem; color: #6b778c; font-weight: normal; margin-left: 3px;}
-    .del-btn { background: none; border: none; color: #de350b; font-size: 1.3rem; cursor: pointer; margin-left: 8px; padding: 0; padding-bottom: 2px;}
-    .sortable-ghost { opacity: 0.4; background-color: #f4f5f7; border: 1px dashed #0079bf; }
+    /* 💡 [v4.6] 카드 마이크로 디자인: 폰트 70% 축소, 폭 가변, 상하 분리 */
+    .kanban-card { background: white; border-radius: 6px; padding: 6px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); color: #172b4d; display: flex; flex-direction: column; gap: 6px; max-width: 145px; border: 1px solid transparent; flex-grow: 1; justify-content: space-between;}
+    .card-name { font-weight: 700; font-size: 0.75rem; word-break: keep-all; line-height: 1.2; padding-right: 4px;}
+    .card-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #eee; padding-top: 4px; }
+    
+    /* 💡 [v4.6] 조작 버튼 간격 극한 축소 */
+    .qty-ctrl { display: flex; align-items: center; gap: 1px; }
+    .qty-btn { background: #f0f1f4; border: none; border-radius: 4px; width: 22px; height: 22px; font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0;}
+    .qty-display { font-weight: 800; font-size: 0.8rem; min-width: 24px; text-align: center; margin: 0 2px;}
+    .unit-text { font-size: 0.65rem; color: #6b778c; }
+    .del-btn { color: #de350b; font-size: 1rem; border: none; background: none; padding: 0; margin-left: 5px;}
+    .sortable-ghost { opacity: 0.3; }
   </style>
 </head>
 <body>
-
-  <div class="header"><div style="font-weight: bold; font-size: 1.2rem;">똑똑한 냉동고 집사</div><div class="version-tag">v4.5</div></div>
-  <div class="status" id="statusLabel">대기 중...</div>
+  <div class="header">
+    <div style="font-weight: bold; font-size: 1.1rem;">똑똑한 냉동고 집사</div>
+    <div class="version-tag">v4.6.1</div>
+    <div class="status" id="statusLabel">집사 대기 중...</div>
+  </div>
   <div id="chatContainer"></div>
-  
   <div class="controls">
     <div class="btn-row">
       <button class="naepa-btn" onclick="requestNaepa()">✨ 냉파 제안</button>
-      <button class="inv-btn" onclick="openInventory()">📋 보드 열기</button>
+      <button class="inv-btn" onclick="openInventory()">📋 냉동고 보기</button>
     </div>
     <div class="input-row">
       <button id="micBtn" onclick="handleMicClick()">🎤</button>
@@ -101,8 +105,8 @@
 
   <div id="invModal">
     <div class="modal-header">
-      <button class="close-btn" onclick="closeInventory()">닫기</button>
-      <div class="modal-title">냉동고 창고 보드</div>
+      <button class="close-btn" onclick="closeInventory()">취소</button>
+      <div style="color:white; font-weight:bold;">냉동고 디지털 트윈</div>
       <button class="save-btn" onclick="saveInventory()">저장</button>
     </div>
     <div class="kanban-board" id="invList"></div>
@@ -111,28 +115,24 @@
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP5lCFozQRiP7LAHwtkeT104NLzUfPSBwN_v1ZEoOc8hQ2W5lVi97FJ9xVEN79WEoY/exec";
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  let isListening = false; let finalTranscript = ""; let saveTranscript = ""; 
-  let requestStartTime = 0; let currentInventoryData = []; window.utterances = []; 
+  let isListening = false; let requestStartTime = 0; let currentInventoryData = [];
 
   recognition.lang = 'ko-KR'; recognition.continuous = true; recognition.interimResults = true;
 
+  // 💡 [v4.6] 남성 목소리 세팅 강화
   function playTTS(text) {
     if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel(); window.utterances = []; 
-    let cleanText = text.replace(/[*#\-_]/g, ''); let sentences = cleanText.split('\n');
-    setTimeout(() => {
-      sentences.forEach(sentence => {
-        if (sentence.trim() === '') return;
-        if (sentence.length > 100) {
-           let parts = sentence.split('. ');
-           parts.forEach((part, index) => {
-              let textToSpeak = part.trim() + (index < parts.length - 1 ? "." : "");
-              if(textToSpeak.length > 0) { let utterance = new SpeechSynthesisUtterance(textToSpeak); utterance.lang = "ko-KR"; utterance.rate = 1.1; window.utterances.push(utterance); window.speechSynthesis.speak(utterance); }
-           });
-        } else { let utterance = new SpeechSynthesisUtterance(sentence.trim()); utterance.lang = "ko-KR"; utterance.rate = 1.1; window.utterances.push(utterance); window.speechSynthesis.speak(utterance); }
-      });
-      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-    }, 50);
+    window.speechSynthesis.cancel();
+    let cleanText = text.replace(/[*#\-_]/g, '');
+    let utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = window.speechSynthesis.getVoices();
+    let maleVoice = voices.find(v => v.lang.includes('ko') && (v.name.includes('Male') || v.name.includes('남성')));
+    if(!maleVoice) maleVoice = voices.find(v => v.lang.includes('ko')); 
+    
+    utterance.voice = maleVoice;
+    utterance.pitch = 0.8; // 피치를 낮춰 강제 저음(남성톤) 유도
+    utterance.rate = 1.05;
+    window.speechSynthesis.speak(utterance);
   }
 
   function createChatBubble(text, sender, mode = 3, menus = null) {
@@ -141,138 +141,166 @@
     if (sender === 'butler') {
       const textSpan = document.createElement('span'); textSpan.innerText = text; bubble.appendChild(textSpan);
       if (mode !== 2 && mode !== 1) {
-        const speakerBtn = document.createElement('span'); speakerBtn.innerText = " 🔊"; speakerBtn.style.cursor = "pointer";
-        speakerBtn.onclick = () => playTTS(text); bubble.appendChild(speakerBtn);
+        const spk = document.createElement('span'); spk.innerText = " 🔊"; spk.style.cursor = "pointer";
+        spk.onclick = () => playTTS(text); bubble.appendChild(spk);
       }
-      if (menus && menus.length > 0) {
-        let chipsDiv = document.createElement('div'); chipsDiv.className = 'menu-chips';
+      if (menus) {
+        let chips = document.createElement('div'); chips.className = 'menu-chips';
         menus.forEach(m => {
-          let btn = document.createElement('button'); btn.className = 'menu-chip'; btn.innerText = m;
-          btn.onclick = () => { createChatBubble(m + " 레시피 알려줘", 'user'); playTTS("레시피를 준비하겠습니다."); sendToBackend(m + " 레시피 알려줘"); };
-          chipsDiv.appendChild(btn);
+          let b = document.createElement('button'); b.className = 'menu-chip'; b.innerText = m;
+          b.onclick = () => { createChatBubble(m+" 레시피 알려줘", 'user'); playTTS("레시피를 준비하겠습니다."); sendToBackend(m+" 레시피 알려줘"); };
+          chips.appendChild(b);
         });
-        let moreBtn = document.createElement('button'); moreBtn.className = 'menu-chip more'; moreBtn.innerText = "🔄 다른 메뉴 추천받기";
-        moreBtn.onclick = () => requestNaepa(); chipsDiv.appendChild(moreBtn);
-        bubble.appendChild(chipsDiv);
+        let more = document.createElement('button'); more.className = 'menu-chip more'; more.innerText = "🔄 다른 메뉴 추천받기";
+        more.onclick = () => requestNaepa(); chips.appendChild(more);
+        bubble.appendChild(chips);
       }
     } else { bubble.innerText = text; }
     container.appendChild(bubble); container.scrollTop = container.scrollHeight; return bubble;
   }
 
+  let saveTranscript = "";
   function startListening() { 
     if (isListening) return; 
     try { 
-      finalTranscript = ""; saveTranscript = document.getElementById('textInput').value; 
+      saveTranscript = document.getElementById('textInput').value; 
       if(saveTranscript.length > 0 && !saveTranscript.endsWith(' ')) saveTranscript += ' ';
       recognition.start(); 
     } catch (e) { setTimeout(() => recognition.start(), 200); } 
   }
   
-  recognition.onstart = function() { isListening = true; updateStatus("🎤 듣고 있습니다..."); document.getElementById('micBtn').classList.add('listening'); };
-  
-  recognition.onresult = function(event) {
-    let currentResult = "";
-    if (/Android/i.test(navigator.userAgent)) { currentResult = event.results[event.results.length - 1][0].transcript; } 
-    else { for (let i = 0; i < event.results.length; i++) currentResult += event.results[i][0].transcript; }
-    finalTranscript = currentResult; document.getElementById('textInput').value = saveTranscript + currentResult; 
+  recognition.onstart = () => { isListening = true; document.getElementById('micBtn').classList.add('listening'); document.getElementById('statusLabel').innerText = "🎤 듣고 있습니다..."; };
+  recognition.onresult = (e) => {
+    let res = ""; for (let i = e.resultIndex; i < e.results.length; i++) res += e.results[i][0].transcript;
+    document.getElementById('textInput').value = saveTranscript + res;
   };
-  
-  recognition.onend = function() {
+  recognition.onend = () => {
     if (isListening && /Android/i.test(navigator.userAgent)) {
-      if (finalTranscript.trim() !== "") { saveTranscript += finalTranscript + " "; finalTranscript = ""; }
+      saveTranscript = document.getElementById('textInput').value + " "; 
       try { recognition.start(); } catch (e) { setTimeout(() => { if (isListening) recognition.start(); }, 200); }
     }
   };
 
   function handleMicClick() {
-    if (isListening) { isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening'); updateStatus("입력 대기 중 (수정 및 전송 가능)"); } 
+    if (isListening) { isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening'); document.getElementById('statusLabel').innerText = "수정 후 전송 가능"; } 
     else { startListening(); }
   }
 
   function handleEnter(e) { if(e.key === 'Enter') handleTextSubmit(); }
   function handleTextSubmit() {
     if (isListening) { isListening = false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening'); }
-    const text = document.getElementById('textInput').value; if(!text.trim()) return;
-    document.getElementById('textInput').value = ""; createChatBubble(text, 'user'); playTTS("확인 중입니다."); sendToBackend(text);
+    const t = document.getElementById('textInput').value; if(!t.trim()) return;
+    document.getElementById('textInput').value = ""; createChatBubble(t, 'user'); sendToBackend(t);
   }
 
-  function requestNaepa() { createChatBubble("✨ 냉파 제안해줘", 'user'); playTTS("맞춤형 요리 6가지를 엄선하겠습니다."); sendToBackend("냉파 제안해줘"); }
+  function requestNaepa() { createChatBubble("✨ 냉파 제안해줘", 'user'); playTTS("최적의 메뉴를 엄선 중입니다."); sendToBackend("냉파 제안해줘"); }
 
-  function sendToBackend(text) {
-    requestStartTime = performance.now(); updateStatus("⌛ 구글 서버와 통신 중...");
-    fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ text: text }) })
-    .then(response => response.json()).then(data => {
-      if(data.status === "mismatch") showMismatchModal(data.mismatch, data.parsedData, data.response);
-      else responseFromGemini(data.response, data.mode, data.menus);
-    }).catch(err => updateStatus("통신 오류가 발생했습니다."));
+  function sendToBackend(t) {
+    requestStartTime = performance.now(); document.getElementById('statusLabel').innerText = "⌛ 통신 중...";
+    fetch(GAS_WEB_APP_URL, { method: "POST", body: JSON.stringify({ text: t }) })
+    .then(r => r.json()).then(d => {
+      if(d.status === "mismatch") { showMismatchModal(d.mismatch, d.parsedData, d.response); return; }
+      const dur = ((performance.now() - requestStartTime) / 1000).toFixed(2);
+      document.getElementById('statusLabel').innerText = `✅ 완료: ${dur}초`;
+      createChatBubble(d.response, 'butler', d.mode, d.menus);
+      setTimeout(() => { if (d.mode === 2) playTTS("화면의 상세 정보를 참조해 주세요."); else if (d.mode === 1) playTTS("메뉴를 화면에서 선택해 주세요."); else playTTS(d.response); }, 10);
+    });
   }
 
-  function responseFromGemini(response, mode, menus) {
-    const duration = ((performance.now() - requestStartTime) / 1000).toFixed(2); updateStatus(`✅ 처리 완료: ${duration}초`);
-    createChatBubble(response, 'butler', mode, menus);
-    setTimeout(() => { if (mode === 2) { playTTS("상세 정보는 화면을 참조해 주세요."); } else if(mode === 1) { playTTS("화면에서 원하시는 메뉴를 선택해 주세요."); } else { playTTS(response); } }, 10);
-  }
-
-  function updateStatus(msg) { const el = document.getElementById('statusLabel'); if(el) el.innerText = msg; }
-
+  // 팝업 로직
   let pendingData = []; let pendingAiMessage = ""; let currentMismatch = null;
   function showMismatchModal(mismatch, parsedData, aiMsg) {
     pendingData = parsedData; pendingAiMessage = aiMsg; currentMismatch = mismatch;
     document.getElementById('mismatchText').innerHTML = `<b style="color:#00e676; font-size:1.3rem;">${mismatch.item}</b> 품목이<br>기존에는 <b>'${mismatch.oldUnit}'</b> 단위입니다.<br><br>어떻게 저장할까요?`;
     const btnOld = document.getElementById('btnOldUnit'); btnOld.innerText = `기존 '${mismatch.oldUnit}'(으)로 통합`; btnOld.onclick = () => resolveMismatch(mismatch.oldUnit);
     const btnNew = document.getElementById('btnNewUnit'); btnNew.innerText = `새로운 '${mismatch.newUnit}'(으)로 추가`; btnNew.onclick = () => resolveMismatch(mismatch.newUnit);
-    document.getElementById('mismatchModal').style.display = 'flex'; playTTS(`${mismatch.item} 단위가 다릅니다. 화면에서 선택해주세요.`);
+    document.getElementById('mismatchModal').style.display = 'flex'; playTTS(`${mismatch.item} 단위가 다릅니다. 선택해주세요.`);
   }
 
   function resolveMismatch(chosenUnit) {
-    document.getElementById('mismatchModal').style.display = 'none'; updateStatus("⌛ 단위를 반영하여 저장 중...");
+    document.getElementById('mismatchModal').style.display = 'none'; document.getElementById('statusLabel').innerText = "⌛ 단위를 반영하여 저장 중...";
     pendingData.forEach(item => { if(item.item === currentMismatch.item) item.unit = chosenUnit; });
-    fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "applyResolved", data: pendingData, aiMessage: pendingAiMessage }) })
-    .then(res => res.json()).then(data => responseFromGemini(data.response, 3)).catch(err => updateStatus("통신 실패"));
+    fetch(GAS_WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "applyResolved", data: pendingData, aiMessage: pendingAiMessage }) })
+    .then(res => res.json()).then(data => {
+      document.getElementById('statusLabel').innerText = `✅ 단위 수정 완료`;
+      createChatBubble(data.response, 'butler', 3); playTTS(data.response);
+    });
   }
 
+  // 💡 [v4.6.1] 자유도(Dynamic Dictionary)와 고정 순서 병합 로직
+  const BASE_LOC_ORDER = ["선반1", "선반2", "선반3", "선반4", "서랍1", "서랍2", "문선반"];
+  
   function openInventory() {
-    document.getElementById('invModal').style.display = 'flex'; document.getElementById('invList').innerHTML = "<div style='color:white; margin:20px;'>데이터 불러오는 중...</div>";
-    fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "getInventory" }) })
-    .then(res => res.json()).then(resData => { if(resData.status === "success") { currentInventoryData = resData.data; renderInventoryList(); } }).catch(e => { document.getElementById('invList').innerHTML = "<div style='color:red;'>통신 실패</div>"; });
+    document.getElementById('invModal').style.display = 'flex';
+    document.getElementById('invList').innerHTML = "<div style='color:white; padding:20px;'>데이터 로드 중...</div>";
+    fetch(GAS_WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "getInventory" }) })
+    .then(r => r.json()).then(res => { currentInventoryData = res.data; renderRows(); });
   }
 
   function closeInventory() { document.getElementById('invModal').style.display = 'none'; }
 
-  function renderInventoryList() {
+  function renderRows() {
     const board = document.getElementById('invList'); board.innerHTML = "";
-    let grouped = {}; currentInventoryData.forEach((item) => { let loc = item.location || "미지정"; if(!grouped[loc]) grouped[loc] = []; grouped[loc].push(item); });
-    if(Object.keys(grouped).length === 0) { board.innerHTML = "<div style='color:white; margin:20px;'>냉동고가 비어있습니다.</div>"; return; }
+    let grouped = {}; currentInventoryData.forEach(item => {
+      let l = item.location || "미지정"; if(!grouped[l]) grouped[l] = []; grouped[l].push(item);
+    });
 
-    for(let loc in grouped) {
-       const col = document.createElement('div'); col.className = 'kanban-column'; col.setAttribute('data-location', loc);
-       col.innerHTML = `<div class="kanban-header">${loc}</div><div class="kanban-cards" id="cards-${loc}"></div>`;
-       board.appendChild(col);
-       const cardsContainer = col.querySelector('.kanban-cards');
-       grouped[loc].forEach(item => {
-          const card = document.createElement('div'); card.className = 'kanban-card'; card.setAttribute('data-name', item.item); card.setAttribute('data-qty', item.qty); card.setAttribute('data-unit', item.unit);
-          card.innerHTML = `<div class="card-top"><div class="drag-handle">☰</div><div class="card-name" onclick="editCardName(this)">${item.item}</div></div><div class="card-bottom"><button class="qty-btn" onclick="changeCardQty(this, -1)">-</button><div class="qty-display">${item.qty}<span class="unit-text">${item.unit}</span></div><button class="qty-btn" onclick="changeCardQty(this, 1)">+</button><button class="del-btn" onclick="deleteCard(this)">✕</button></div>`;
-          cardsContainer.appendChild(card);
-       });
-       new Sortable(cardsContainer, { group: 'shared', handle: '.drag-handle', animation: 150, ghostClass: 'sortable-ghost' });
-    }
+    // 지정된 순서를 최우선으로 하되, 시트에 새로 추가된 낯선 위치도 잃어버리지 않게 맨 밑에 추가
+    let dynamicLocs = Object.keys(grouped).filter(loc => !BASE_LOC_ORDER.includes(loc) && loc !== "미지정");
+    const FINAL_ORDER = [...BASE_LOC_ORDER, ...dynamicLocs, "미지정"];
+
+    FINAL_ORDER.forEach(loc => {
+      if(!grouped[loc] && loc === "미지정") return; // 비어있는 미지정은 숨김
+      
+      const row = document.createElement('div'); row.className = 'kanban-row'; row.setAttribute('data-loc', loc);
+      row.innerHTML = `<div class="row-header">${loc}</div><div class="row-cards" id="row-${loc}"></div>`;
+      board.appendChild(row);
+      const cardsCont = row.querySelector('.row-cards');
+      
+      (grouped[loc] || []).forEach(item => {
+        const card = document.createElement('div'); card.className = 'kanban-card';
+        card.setAttribute('data-name', item.item); card.setAttribute('data-qty', item.qty); card.setAttribute('data-unit', item.unit);
+        card.innerHTML = `
+          <div class="card-name" onclick="editCardName(this)">${item.item}</div>
+          <div class="card-bottom">
+            <div class="qty-ctrl">
+              <button class="qty-btn" onclick="changeCardQty(this, -1)">-</button>
+              <div class="qty-display">${item.qty}<span class="unit-text">${item.unit}</span></div>
+              <button class="qty-btn" onclick="changeCardQty(this, 1)">+</button>
+            </div>
+            <button class="del-btn" onclick="this.closest('.kanban-card').remove()">✕</button>
+          </div>`;
+        cardsCont.appendChild(card);
+      });
+      new Sortable(cardsCont, { group: 'fridge', animation: 150, ghostClass: 'sortable-ghost' });
+    });
   }
 
-  function editCardName(element) { let card = element.closest('.kanban-card'); let currentName = card.getAttribute('data-name'); let newName = prompt("품목명을 수정하세요:", currentName); if(newName && newName.trim() !== "") { card.setAttribute('data-name', newName.trim()); element.innerText = newName.trim(); } }
-  function changeCardQty(btn, delta) { 
-    let card = btn.closest('.kanban-card'); let currentQty = Number(card.getAttribute('data-qty')); let newQty = currentQty + delta; if(newQty < 0) newQty = 0; 
-    card.setAttribute('data-qty', newQty); let unit = card.getAttribute('data-unit'); card.querySelector('.qty-display').innerHTML = `${newQty}<span class="unit-text">${unit}</span>`; 
-    if(newQty === 0) { card.style.opacity = "0.4"; } else { card.style.opacity = "1"; }
+  function editCardName(el) {
+    let c = el.closest('.kanban-card'); let n = prompt("수정:", c.getAttribute('data-name'));
+    if(n && n.trim() !== "") { c.setAttribute('data-name', n.trim()); el.innerText = n.trim(); }
   }
-  function deleteCard(btn) { let card = btn.closest('.kanban-card'); let name = card.getAttribute('data-name'); if(confirm(`'${name}' 항목을 삭제하시겠습니까?`)) { card.remove(); } }
-  
+  function changeCardQty(btn, d) {
+    let c = btn.closest('.kanban-card'); let q = Math.max(0, Number(c.getAttribute('data-qty')) + d);
+    c.setAttribute('data-qty', q); c.querySelector('.qty-display').innerHTML = `${q}<span class="unit-text">${c.getAttribute('data-unit')}</span>`;
+    c.style.opacity = (q === 0) ? "0.3" : "1";
+  }
+
   function saveInventory() {
-    let newData = [];
-    document.querySelectorAll('.kanban-column').forEach(col => { let loc = col.getAttribute('data-location'); col.querySelectorAll('.kanban-card').forEach(card => { newData.push({ item: card.getAttribute('data-name'), qty: Number(card.getAttribute('data-qty')), unit: card.getAttribute('data-unit'), location: loc }); }); });
+    let data = []; document.querySelectorAll('.kanban-row').forEach(r => {
+      let loc = r.getAttribute('data-loc');
+      r.querySelectorAll('.kanban-card').forEach(c => {
+        data.push({ item: c.getAttribute('data-name'), qty: Number(c.getAttribute('data-qty')), unit: c.getAttribute('data-unit'), location: loc });
+      });
+    });
     const saveBtn = document.querySelector('.save-btn'); saveBtn.innerText = "저장중.."; saveBtn.disabled = true;
-    fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "saveInventory", data: newData }) })
-    .then(res => res.json()).then(resData => { saveBtn.innerText = "저장"; saveBtn.disabled = false; closeInventory(); updateStatus("✅ " + resData.message); }).catch(e => { saveBtn.innerText = "저장"; saveBtn.disabled = false; alert("저장 실패"); });
+    fetch(GAS_WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "saveInventory", data: data }) })
+    .then(() => { saveBtn.innerText = "저장"; saveBtn.disabled = false; closeInventory(); document.getElementById('statusLabel').innerText = "✅ 변경사항 저장 완료"; })
+    .catch(() => { saveBtn.innerText = "저장"; saveBtn.disabled = false; alert("저장 실패"); });
   }
+  
+  // 브라우저 첫 로드 시 목소리 캐시 강제 활성화
+  if('speechSynthesis' in window) { window.speechSynthesis.getVoices(); }
 </script>
 </body>
 </html>
