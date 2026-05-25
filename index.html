@@ -15,8 +15,7 @@
     input[type="text"] { -webkit-user-select: auto; user-select: auto; }
     body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; position: relative; }
     
-    /* 💡 버전 태그 v4.8.1 (주황색) */
-    .version-tag { position: absolute; top: 10px; right: 15px; font-size: 0.9rem; color: #ff9800; font-weight: 900; background: #333; padding: 2px 6px; border-radius: 4px;}
+    .version-tag { position: absolute; top: 10px; right: 15px; font-size: 0.9rem; color: #ff4444; font-weight: 900; background: #333; padding: 2px 6px; border-radius: 4px;}
     
     .header { padding: 15px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; position: relative; }
     .status { font-size: 0.75rem; color: #ffcc00; margin-top: 5px; font-weight: bold; text-align: center;}
@@ -92,7 +91,7 @@
 <body>
   <div class="header">
     <div style="font-weight: bold; font-size: 1.1rem;">똑똑한 냉동고 집사</div>
-    <div class="version-tag">v4.8.1</div>
+    <div class="version-tag">v4.8.2</div>
     <div class="status" id="statusLabel">집사 대기 중...</div>
   </div>
   <div id="chatContainer"></div>
@@ -135,6 +134,9 @@
   let requestStartTime = 0; 
   let currentInventoryData = [];
   let saveTranscript = "";
+  
+  // 💡 [핵심 복구 1] 안드로이드 브라우저의 오디오 메모리 증발 방지용 전역 변수
+  let globalUtterance = null; 
 
   try {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -160,14 +162,18 @@
     console.error("음성 인식 기능 초기화 실패", e);
   }
 
-  // 💡 [수정] 오작동을 일으켰던 복잡한 목소리 탐색 로직을 모두 삭제하고, 가장 안정적인 기본 설정(여성)으로 완전 복구
+  // 💡 [핵심 복구 2] 과거 소장님의 성공 코드 완벽 이식 (setTimeout 여유 시간 확보)
   function playTTS(text) {
     if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    let cleanText = text.replace(/[*#\-_]/g, '');
-    let utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'ko-KR';
-    window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.cancel(); // 이전 음성 확실히 초기화
+    
+    setTimeout(() => {
+      let cleanText = text.replace(/[*#\-_]/g, ''); // 텍스트 찌꺼기 제거
+      globalUtterance = new SpeechSynthesisUtterance(cleanText);
+      globalUtterance.lang = "ko-KR";
+      globalUtterance.rate = 1.05; // 안정적인 속도
+      window.speechSynthesis.speak(globalUtterance);
+    }, 50); // 0.05초 대기 후 재생 (엔진 꼬임 방지)
   }
 
   function createChatBubble(text, sender, mode = 3, menus = null) {
