@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,8 +15,8 @@
     input[type="text"] { -webkit-user-select: auto; user-select: auto; }
     body { font-family: 'Noto Sans KR', sans-serif; background: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; position: relative; }
     
-    /* 💡 버전 태그 업데이트 */
-    .version-tag { position: absolute; top: 10px; right: 15px; font-size: 0.9rem; color: #b388ff; font-weight: 900; background: #333; padding: 2px 6px; border-radius: 4px;}
+    /* 💡 버전 태그 v4.8.1 (주황색) */
+    .version-tag { position: absolute; top: 10px; right: 15px; font-size: 0.9rem; color: #ff9800; font-weight: 900; background: #333; padding: 2px 6px; border-radius: 4px;}
     
     .header { padding: 15px; text-align: center; background: #1f1f1f; border-bottom: 1px solid #333; position: relative; }
     .status { font-size: 0.75rem; color: #ffcc00; margin-top: 5px; font-weight: bold; text-align: center;}
@@ -59,25 +60,22 @@
     
     .kanban-board { flex: 1; overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 6px; }
     
-    /* 💡 [수정] 박스가 밑으로 무한히 늘어날 수 있도록 overflow 속성 제거 및 align-items 적용 */
     .kanban-row { display: flex; background: rgba(235, 236, 240, 0.95); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); height: auto; align-items: stretch; margin-bottom: 2px;}
     .row-header { width: 55px; min-width: 55px; padding: 6px 4px; font-weight: 800; color: #172b4d; font-size: 0.8rem; border-right: 1px solid #ccc; display: flex; align-items: center; justify-content: center; text-align: center; }
     
-    /* 💡 [수정] 카드들이 아래로 차곡차곡 쌓이도록 wrap 설정 */
     .row-cards { 
       flex: 1; display: flex !important; flex-wrap: wrap !important; 
       align-content: flex-start; gap: 4px; padding: 4px; min-height: 40px; 
     }
     
-    /* 💡 [수정] 2열 고정 및 극한의 다이어트 레이아웃 */
     .kanban-card { 
       background: white; border-radius: 5px; padding: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); 
       color: #172b4d; display: flex; flex-direction: row; gap: 4px; 
-      flex: 0 0 calc(50% - 2px) !important; /* 무조건 한 줄에 2개 꽉 차게 계산 */
+      flex: 0 0 calc(50% - 2px) !important; 
       width: auto !important; max-width: none !important; border: 1px solid transparent; 
     }
     
-    .card-content { display: flex; flex-direction: column; justify-content: space-between; flex: 1; min-width: 0; /* min-width:0 으로 글자 넘침 방지 */ }
+    .card-content { display: flex; flex-direction: column; justify-content: space-between; flex: 1; min-width: 0; }
     .card-name { font-weight: 700; font-size: 0.75rem; word-break: keep-all; line-height: 1.1; cursor: pointer; margin-bottom: 4px;}
     
     .card-actions { display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-left: 1px dashed #ddd; padding-left: 4px; }
@@ -94,7 +92,7 @@
 <body>
   <div class="header">
     <div style="font-weight: bold; font-size: 1.1rem;">똑똑한 냉동고 집사</div>
-    <div class="version-tag">v4.8.0</div>
+    <div class="version-tag">v4.8.1</div>
     <div class="status" id="statusLabel">집사 대기 중...</div>
   </div>
   <div id="chatContainer"></div>
@@ -162,20 +160,13 @@
     console.error("음성 인식 기능 초기화 실패", e);
   }
 
-  // 💡 [수정] 오작동을 일으켰던 해킹성 코드 삭제 후 기존의 안정적인 오디오 로직으로 완전 복귀
+  // 💡 [수정] 오작동을 일으켰던 복잡한 목소리 탐색 로직을 모두 삭제하고, 가장 안정적인 기본 설정(여성)으로 완전 복구
   function playTTS(text) {
     if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.resume(); // 엔진 일시정지 버그 방지용
     window.speechSynthesis.cancel();
     let cleanText = text.replace(/[*#\-_]/g, '');
     let utterance = new SpeechSynthesisUtterance(cleanText);
-    const voices = window.speechSynthesis.getVoices();
-    let maleVoice = voices.find(v => v.lang.includes('ko') && (v.name.includes('Male') || v.name.includes('남성')));
-    if(!maleVoice) maleVoice = voices.find(v => v.lang.includes('ko')); 
-    
-    utterance.voice = maleVoice;
-    utterance.pitch = 0.8; 
-    utterance.rate = 1.05;
+    utterance.lang = 'ko-KR';
     window.speechSynthesis.speak(utterance);
   }
 
@@ -358,8 +349,6 @@
     .then(() => { saveBtn.innerText = "저장"; saveBtn.disabled = false; closeInventory(); document.getElementById('statusLabel').innerText = "✅ 변경사항 저장 완료"; })
     .catch(() => { saveBtn.innerText = "저장"; saveBtn.disabled = false; alert("저장 실패"); });
   }
-  
-  if('speechSynthesis' in window) { window.speechSynthesis.getVoices(); }
 </script>
 </body>
 </html>
